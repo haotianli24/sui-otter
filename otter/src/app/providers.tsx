@@ -21,15 +21,18 @@ const { networkConfig } = createNetworkConfig(networks);
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Register Enoki wallets in the dApp Kit wallet modal
-    // (experimental API; okay for hackathon)
-    registerEnokiConnectWallets({
-      publicAppSlugs: (process.env.NEXT_PUBLIC_ENOKI_PUBLIC_APP_SLUGS || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+    const slugs = (process.env.NEXT_PUBLIC_ENOKI_PUBLIC_APP_SLUGS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (slugs.length === 0) return;
+
+    void registerEnokiConnectWallets({
+      publicAppSlugs: slugs,
       dappName: process.env.NEXT_PUBLIC_DAPP_NAME || "Otter",
-      // Optionally constrain networks: default supports mainnet/testnet/devnet
+    }).catch((err) => {
+      console.error("Failed to register Enoki Connect wallets:", err);
     });
   }, []);
 
@@ -38,7 +41,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork={active}>
-        <WalletProvider>{children}</WalletProvider>
+        <WalletProvider autoConnect>{children}</WalletProvider>
       </SuiClientProvider>
     </QueryClientProvider>
   );

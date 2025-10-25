@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 
-/**
- * POST /api/enoki/execute
- * Body: { digest: string, signature: string }
- * Returns: { digest: string }
- */
+
 export async function POST(req: Request) {
   const { digest, signature } = await req.json();
 
@@ -27,6 +23,5 @@ export async function POST(req: Request) {
   const json = await res.json();
   if (!res.ok) return NextResponse.json({ error: json }, { status: res.status });
 
-  // { data: { digest } }
   return NextResponse.json(json.data);
 }

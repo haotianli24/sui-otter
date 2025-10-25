@@ -1,4 +1,5 @@
 import "./globals.css";
+import '@mysten/dapp-kit/dist/index.css';
 import { Providers } from "@/app/providers";
 
 export const metadata = { title: "Otter", description: "Sui + Enoki scaffold" };

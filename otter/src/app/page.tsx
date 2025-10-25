@@ -1,4 +1,10 @@
+// src/app/page.tsx (Server Component)
 import HomeClient from "@/components/ui/HomeClient";
+
+export const metadata = {
+  title: "Otter",
+  description: "Sui + Enoki + Supabase scaffold",
+};
 
 export default function Page() {
   return (

@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
+import { Transaction } from "@mysten/sui/transactions";
 
-/**
- * POST /api/enoki/sponsor
- * Body: { kindBytesB64: string, sender?: string }
- * Returns: { digest: string, bytes: string }  // bytes = base64 sponsored TX bytes
- */
+
 export async function POST(req: Request) {
   const { kindBytesB64, sender } = await req.json();
 
@@ -21,13 +18,45 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       network: process.env.NEXT_PUBLIC_SUI_NETWORK || "testnet",
       transactionBlockKindBytes: kindBytesB64,
-      sender, // optional; allowed by Enoki for server-sponsored flows
+      sender, 
     }),
   });
 
   const json = await res.json();
   if (!res.ok) return NextResponse.json({ error: json }, { status: res.status });
 
-  // Enoki returns { data: { digest, bytes } }
-  return NextResponse.json(json.data);
+  const data = json.data;
+  const bytes = data?.bytes;
+  let bytesB64: string | null = null;
+  if (typeof bytes === "string") {
+    if (bytes.startsWith("0x")) {
+      let hex = bytes.slice(2);
+      if (hex.length % 2 === 1) hex = "0" + hex;
+      const buf = Buffer.from(hex, "hex");
+      bytesB64 = buf.toString("base64");
+    } else {
+      let s = bytes;
+      if (s.includes("-") || s.includes("_")) {
+        s = s.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = s.length % 4;
+        if (pad) s = s + "=".repeat(4 - pad);
+      }
+      bytesB64 = s;
+    }
+  } else if (Array.isArray(bytes)) {
+    bytesB64 = Buffer.from(Uint8Array.from(bytes)).toString("base64");
+  } else if (bytes?.type === "Buffer" && Array.isArray(bytes?.data)) {
+    bytesB64 = Buffer.from(Uint8Array.from(bytes.data)).toString("base64");
+  }
+
+  if (!bytesB64) {
+    return NextResponse.json({ error: "Invalid sponsor bytes format" }, { status: 500 });
+  }
+
+  data.bytes = bytesB64;
+  try {
+    const tx = Transaction.from(bytesB64);
+    data.json = await tx.toJSON();
+  } catch {}
+  return NextResponse.json(data);
 }
