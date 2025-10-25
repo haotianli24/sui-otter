@@ -8,18 +8,22 @@ module messaging::messaging;
 
 
 module messaging::messaging {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-    use std::string::{Self, String};
-    use sui::event;
-    use sui::coin::{Self, Coin};
+    use std::string::String;
+    use sui::coin::Coin;
     use sui::sui::SUI;
+    use sui::clock::Clock;
+
+    // ===== Constants =====
+    
+    const ENotAuthorized: u64 = 0;
+    const EInvalidRecipient: u64 = 1;
+    const EEmptyContent: u64 = 2;
+    const EInvalidAddress: u64 = 3;
 
     // ===== Structs =====
 
     /// Represents a direct message channel between two users
-    struct Channel has key, store {
+    public struct Channel has key, store {
         id: UID,
         user1: address,
         user2: address,
@@ -27,7 +31,7 @@ module messaging::messaging {
     }
 
     /// Represents a single message
-    struct Message has key, store {
+    public struct Message has key, store {
         id: UID,
         channel_id: address,
         sender: address,
@@ -37,27 +41,27 @@ module messaging::messaging {
     }
 
     /// Message registry to track all channels
-    struct MessageRegistry has key {
+    public struct MessageRegistry has key {
         id: UID,
         channel_count: u64,
     }
 
     // ===== Events =====
 
-    struct ChannelCreated has copy, drop {
+    public struct ChannelCreated has copy, drop {
         channel_id: address,
         user1: address,
         user2: address,
     }
 
-    struct MessageSent has copy, drop {
+    public struct MessageSent has copy, drop {
         message_id: address,
         channel_id: address,
         sender: address,
         timestamp: u64,
     }
 
-    struct CryptoSent has copy, drop {
+    public struct CryptoSent has copy, drop {
         from: address,
         to: address,
         amount: u64,
@@ -67,10 +71,10 @@ module messaging::messaging {
 
     fun init(ctx: &mut TxContext) {
         let registry = MessageRegistry {
-            id: object::new(ctx),
+            id: sui::object::new(ctx),
             channel_count: 0,
         };
-        transfer::share_object(registry);
+        sui::transfer::share_object(registry);
     }
 
     // ===== Public Functions =====
@@ -81,25 +85,31 @@ module messaging::messaging {
         recipient: address,
         ctx: &mut TxContext
     ) {
-        let sender = tx_context::sender(ctx);
+        let sender = sui::tx_context::sender(ctx);
+        
+        // Validate recipient is not the same as sender
+        assert!(sender != recipient, EInvalidRecipient);
+        
+        // Validate recipient address is not zero
+        assert!(recipient != @0x0, EInvalidAddress);
         
         let channel = Channel {
-            id: object::new(ctx),
+            id: sui::object::new(ctx),
             user1: sender,
             user2: recipient,
             encrypted: true,
         };
 
-        let channel_id = object::uid_to_address(&channel.id);
+        let channel_id = sui::object::uid_to_address(&channel.id);
         
-        event::emit(ChannelCreated {
+        sui::event::emit(ChannelCreated {
             channel_id,
             user1: sender,
             user2: recipient,
         });
 
         registry.channel_count = registry.channel_count + 1;
-        transfer::share_object(channel);
+        sui::transfer::share_object(channel);
     }
 
     /// Send a message in a channel
@@ -107,32 +117,38 @@ module messaging::messaging {
         channel: &Channel,
         content: vector<u8>,
         media_ref: vector<u8>,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
-        let sender = tx_context::sender(ctx);
+        let sender = sui::tx_context::sender(ctx);
         
         // Verify sender is part of the channel
-        assert!(sender == channel.user1 || sender == channel.user2, 0);
+        assert!(sender == channel.user1 || sender == channel.user2, ENotAuthorized);
+        
+        // Validate content is not empty
+        assert!(std::vector::length(&content) > 0, EEmptyContent);
 
+        let timestamp = sui::clock::timestamp_ms(clock);
+        
         let message = Message {
-            id: object::new(ctx),
-            channel_id: object::uid_to_address(&channel.id),
+            id: sui::object::new(ctx),
+            channel_id: sui::object::uid_to_address(&channel.id),
             sender,
-            content: string::utf8(content),
-            media_ref: string::utf8(media_ref),
-            timestamp: tx_context::epoch(ctx),
+            content: std::string::utf8(content),
+            media_ref: std::string::utf8(media_ref),
+            timestamp,
         };
 
-        let message_id = object::uid_to_address(&message.id);
+        let message_id = sui::object::uid_to_address(&message.id);
 
-        event::emit(MessageSent {
+        sui::event::emit(MessageSent {
             message_id,
-            channel_id: object::uid_to_address(&channel.id),
+            channel_id: sui::object::uid_to_address(&channel.id),
             sender,
-            timestamp: tx_context::epoch(ctx),
+            timestamp,
         });
 
-        transfer::share_object(message);
+        sui::transfer::share_object(message);
     }
 
     /// Send SUI to another user (for /send command)
@@ -141,11 +157,11 @@ module messaging::messaging {
         payment: Coin<SUI>,
         ctx: &mut TxContext
     ) {
-        let sender = tx_context::sender(ctx);
-        let amount = coin::value(&payment);
+        let sender = sui::tx_context::sender(ctx);
+        let amount = sui::coin::value(&payment);
         
         // Verify sender is part of the channel
-        assert!(sender == channel.user1 || sender == channel.user2, 0);
+        assert!(sender == channel.user1 || sender == channel.user2, ENotAuthorized);
         
         // Determine recipient
         let recipient = if (sender == channel.user1) {
@@ -154,12 +170,19 @@ module messaging::messaging {
             channel.user1
         };
 
-        event::emit(CryptoSent {
+        sui::event::emit(CryptoSent {
             from: sender,
             to: recipient,
             amount,
         });
 
-        transfer::public_transfer(payment, recipient);
+        sui::transfer::public_transfer(payment, recipient);
+    }
+
+    // ===== View Functions =====
+
+    /// Get the channel count from the registry
+    public fun get_channel_count(registry: &MessageRegistry): u64 {
+        registry.channel_count
     }
 }
