@@ -1,5 +1,4 @@
-import { ConnectButton } from "@mysten/dapp-kit";
-import { SponsorTest } from "@/components/ui/SponsorTest";
+import HomeClient from "@/components/ui/HomeClient";
 
 export default function Page() {
   return (
@@ -8,10 +7,7 @@ export default function Page() {
       <p className="text-gray-600 mt-2">
         Next.js + Tailwind + shadcn + Supabase + Sui dApp Kit + Enoki
       </p>
-      <div className="mt-6">
-        <ConnectButton />
-      </div>
-      <SponsorTest />
+      <HomeClient />
     </main>
   );
 }
