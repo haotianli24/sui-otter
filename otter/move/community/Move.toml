@@ -1,0 +1,6 @@
+[package]
+name = "community"
+edition = "2024.beta"
+
+[addresses]
+community = "0x0"
