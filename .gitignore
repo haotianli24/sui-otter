@@ -2,15 +2,19 @@
 node_modules/
 .pnp
 .pnp.js
+yarn.lock
+pnpm-lock.yaml
 
 # Testing
 coverage/
+*.test.cache
 
 # Next.js
 .next/
 out/
 build/
 dist/
+.turbo/
 
 # Production
 build/
@@ -18,12 +22,16 @@ build/
 # Misc
 .DS_Store
 *.pem
+*.swp
+*.swo
+*~
 
 # Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # Local env files
 .env
@@ -43,19 +51,27 @@ next-env.d.ts
 # IDEs
 .idea/
 .vscode/
-*.swp
-*.swo
-*~
+.cursor/
+*.code-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Sui Move
 **/move/**/build/
 **/move/**/.lock
+**/move/**/.coverage
+*.mv
 
-# Logs
-logs/
-*.log
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.cache
+
+# Package manager artifacts
+package-lock.json.bak
+yarn-error.log
 
