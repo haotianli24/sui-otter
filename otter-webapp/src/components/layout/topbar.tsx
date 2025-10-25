@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { WalletConnection } from "@/components/wallet-connection";
 import { currentUser } from "@/lib/mock-data";
 
 export function TopBar() {
@@ -33,6 +34,9 @@ export function TopBar() {
 
       {/* Right side */}
       <div className="flex items-center gap-4">
+        {/* Wallet connection */}
+        <WalletConnection />
+        
         {/* Theme toggle */}
         <Button
           variant="ghost"
