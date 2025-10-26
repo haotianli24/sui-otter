@@ -24,10 +24,10 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your preferences and account settings</p>
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-heading">Settings</h1>
+        <p className="page-subtitle">Manage your preferences and account settings</p>
       </div>
 
       {/* Theme Settings */}
@@ -40,14 +40,20 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Theme</p>
+            <p className="text-sm muted-text">Theme</p>
             <div className="grid grid-cols-3 gap-3">
               {["light", "dark", "system"].map((t) => (
                 <Button
                   key={t}
-                  variant={theme === t ? "default" : "outline"}
-                  className="capitalize"
-                  onClick={() => handleThemeChange(t as "light" | "dark" | "system")}
+                  variant="outline"
+                  className={`capitalize transition-all duration-200 font-medium cursor-pointer ${theme === t
+                      ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20"
+                      : "bg-muted/30 text-muted-foreground border-muted hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/50"
+                  }`}
+                  onClick={() => {
+                    console.log('Setting theme to', t);
+                    handleThemeChange(t as "light" | "dark" | "system");
+                  }}
                 >
                   {t}
                 </Button>
@@ -90,7 +96,7 @@ export default function SettingsPage() {
               >
                 <div>
                   <p className="font-medium">{setting.label}</p>
-                  <p className="text-sm text-muted-foreground">{setting.description}</p>
+                  <p className="text-sm muted-text">{setting.description}</p>
                 </div>
                 <Switch
                   checked={notificationSettings[setting.key]}

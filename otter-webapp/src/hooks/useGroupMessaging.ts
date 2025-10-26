@@ -5,7 +5,6 @@ import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/2024.4";
 
 const COMMUNITY_PACKAGE_ID = '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8';
-const COMMUNITY_REGISTRY_ID = '0x7ece486d159e8b2a8d723552b218ef99a21d3555b199173d2dd49ce2d13b14eb';
 
 export interface GroupMessage {
   id: string;
@@ -87,10 +86,10 @@ export function useGroupChat(communityId: string) {
 
         // Step 3: Get GroupMessage objects for this community using GraphQL
         let messages: GroupMessage[] = [];
-        
+
         try {
-          const client = new SuiGraphQLClient({ 
-            url: "https://graphql.testnet.sui.io/graphql" 
+          const client = new SuiGraphQLClient({
+            url: "https://graphql.testnet.sui.io/graphql"
           });
 
           const query = graphql(`
@@ -115,51 +114,51 @@ export function useGroupChat(communityId: string) {
             },
           });
 
-        if (result.data?.objects?.nodes) {
-          const messageNodes = result.data.objects.nodes as any[];
-          console.log('GraphQL returned message nodes:', messageNodes.length);
-          
-          // Filter messages that belong to this community
-          messages = messageNodes
-            .map((node) => {
-              const fields = node.asMoveObject?.contents?.json;
-              if (!fields || typeof fields !== 'object') {
+          if (result.data?.objects?.nodes) {
+            const messageNodes = result.data.objects.nodes as any[];
+            console.log('GraphQL returned message nodes:', messageNodes.length);
+
+            // Filter messages that belong to this community
+            messages = messageNodes
+              .map((node) => {
+                const fields = node.asMoveObject?.contents?.json;
+                if (!fields || typeof fields !== 'object') {
+                  return null;
+                }
+
+                console.log('Message fields:', fields, 'community_id:', fields.community_id, 'matches:', fields.community_id === communityId);
+
+                // Check if this message belongs to our community
+                if (fields.community_id === communityId) {
+                  // timestamp is epoch number from smart contract
+                  // Store as epoch number for stable timestamp
+                  const epoch = parseInt(fields.timestamp as string);
+                  return {
+                    id: node.address || '',
+                    communityId,
+                    sender: fields.sender as string,
+                    content: fields.content as string,
+                    mediaRef: fields.media_ref as string,
+                    timestamp: epoch, // Store epoch number directly
+                  } as GroupMessage;
+                }
                 return null;
-              }
+              })
+              .filter((msg): msg is GroupMessage => msg !== null);
 
-              console.log('Message fields:', fields, 'community_id:', fields.community_id, 'matches:', fields.community_id === communityId);
+            console.log('Filtered messages count:', messages.length);
 
-              // Check if this message belongs to our community
-              if (fields.community_id === communityId) {
-                // timestamp is epoch number from smart contract
-                // Store as epoch number for stable timestamp
-                const epoch = parseInt(fields.timestamp as string);
-                return {
-                  id: node.address || '',
-                  communityId,
-                  sender: fields.sender as string,
-                  content: fields.content as string,
-                  mediaRef: fields.media_ref as string,
-                  timestamp: epoch, // Store epoch number directly
-                } as GroupMessage;
-              }
-              return null;
-            })
-            .filter((msg): msg is GroupMessage => msg !== null);
-          
-          console.log('Filtered messages count:', messages.length);
-          
-          // Sort by timestamp (most recent first) - now with proper Clock timestamps
-          messages.sort((a, b) => b.timestamp - a.timestamp);
-          
-          // Debug: Log sorted messages with readable timestamps
-          console.log('[useGroupChat] Messages sorted by timestamp:', messages.map(m => ({
-            id: m.id.substring(0, 8),
-            sender: m.sender.substring(0, 8),
-            timestamp: m.timestamp,
-            readableTime: new Date(m.timestamp).toISOString(),
-            content: m.content.substring(0, 20) + '...'
-          })));
+            // Sort by timestamp (most recent first) - now with proper Clock timestamps
+            messages.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Debug: Log sorted messages with readable timestamps
+            console.log('[useGroupChat] Messages sorted by timestamp:', messages.map(m => ({
+              id: m.id.substring(0, 8),
+              sender: m.sender.substring(0, 8),
+              timestamp: m.timestamp,
+              readableTime: new Date(m.timestamp).toISOString(),
+              content: m.content.substring(0, 20) + '...'
+            })));
           }
         } catch (error) {
           console.error('Error fetching group messages:', error);
@@ -258,8 +257,8 @@ export function useGroupMessages(communityId: string) {
       try {
         // Try GraphQL first
         try {
-          const client = new SuiGraphQLClient({ 
-            url: "https://graphql.testnet.sui.io/graphql" 
+          const client = new SuiGraphQLClient({
+            url: "https://graphql.testnet.sui.io/graphql"
           });
 
           const query = graphql(`
@@ -286,7 +285,7 @@ export function useGroupMessages(communityId: string) {
 
           console.log('[useGroupMessages] GraphQL result:', result);
           console.log('[useGroupMessages] Querying for type:', `${COMMUNITY_PACKAGE_ID}::community::GroupMessage`);
-          
+
           // Log errors if they exist
           if (result.errors && result.errors.length > 0) {
             console.error('[useGroupMessages] GraphQL errors:', result.errors);
@@ -296,7 +295,7 @@ export function useGroupMessages(communityId: string) {
           if (result.data?.objects?.nodes) {
             const messageNodes = result.data.objects.nodes as any[];
             console.log('[useGroupMessages] GraphQL returned message nodes:', messageNodes.length);
-            
+
             // Filter messages that belong to this community
             const messages = messageNodes
               .map((node) => {
@@ -312,40 +311,40 @@ export function useGroupMessages(communityId: string) {
                   matches: fields.community_id === communityId
                 });
 
-              // Check if this message belongs to our community
-              if (fields.community_id === communityId) {
-                // timestamp is now millisecond precision from Sui Clock
-                // Store as timestamp for proper chronological ordering
-                const rawTimestamp = fields.timestamp as string;
-                const timestamp = parseInt(rawTimestamp);
-                
-                console.log('[useGroupMessages] Parsing timestamp:', {
-                  rawTimestamp,
-                  parsedTimestamp: timestamp,
-                  isValid: !isNaN(timestamp),
-                  readableTime: new Date(timestamp).toISOString(),
-                  sender: fields.sender,
-                  content: fields.content.substring(0, 20) + '...'
-                });
-                
-                return {
-                  id: node.address || '',
-                  communityId,
-                  sender: fields.sender as string,
-                  content: fields.content as string,
-                  mediaRef: fields.media_ref as string,
-                  timestamp: timestamp, // Store millisecond timestamp directly
-                } as GroupMessage;
-              }
+                // Check if this message belongs to our community
+                if (fields.community_id === communityId) {
+                  // timestamp is now millisecond precision from Sui Clock
+                  // Store as timestamp for proper chronological ordering
+                  const rawTimestamp = fields.timestamp as string;
+                  const timestamp = parseInt(rawTimestamp);
+
+                  console.log('[useGroupMessages] Parsing timestamp:', {
+                    rawTimestamp,
+                    parsedTimestamp: timestamp,
+                    isValid: !isNaN(timestamp),
+                    readableTime: new Date(timestamp).toISOString(),
+                    sender: fields.sender,
+                    content: fields.content.substring(0, 20) + '...'
+                  });
+
+                  return {
+                    id: node.address || '',
+                    communityId,
+                    sender: fields.sender as string,
+                    content: fields.content as string,
+                    mediaRef: fields.media_ref as string,
+                    timestamp: timestamp, // Store millisecond timestamp directly
+                  } as GroupMessage;
+                }
                 return null;
               })
               .filter((msg): msg is GroupMessage => msg !== null);
 
             console.log('[useGroupMessages] Filtered messages count:', messages.length);
-            
+
             // Sort by timestamp (most recent first) - now with proper Clock timestamps
             messages.sort((a, b) => a.timestamp - b.timestamp);
-            
+
             // Debug: Log sorted messages with readable timestamps
             console.log('[useGroupMessages] Messages sorted by timestamp:', messages.map(m => ({
               id: m.id.substring(0, 8),
@@ -354,7 +353,7 @@ export function useGroupMessages(communityId: string) {
               readableTime: new Date(m.timestamp).toISOString(),
               content: m.content.substring(0, 20) + '...'
             })));
-            
+
             return messages;
           }
 
@@ -366,12 +365,12 @@ export function useGroupMessages(communityId: string) {
         // Fallback: Try to get all objects and filter manually
         // This is a workaround since GraphQL might not be working properly
         console.log('[useGroupMessages] Trying RPC fallback...');
-        
+
         // For now, return empty array since we can't easily query shared objects via RPC
         // In a real implementation, you'd need to track message IDs or use events
         console.log('[useGroupMessages] RPC fallback not implemented yet');
         return [];
-        
+
       } catch (error) {
         console.error('Error fetching group messages:', error);
         return [];

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Transaction Detection Test</title>
+</head>
+
+<body>
+    <h1>Transaction Detection Test</h1>
+    <div id="test-results"></div>
+
+    <script>
+        // Transaction hash detection patterns
+        const SUI_DIGEST_PATTERN = /\b[A-HJ-NP-Za-km-z1-9]{43,44}\b/g;
+        const HEX_HASH_PATTERN = /0x[a-fA-F0-9]{64}/g;
+
+        function detectTransactionHash(text) {
+            if (!text || typeof text !== 'string') {
+                return null;
+            }
+
+            console.log('Detecting transaction hash in text:', text);
+
+            // First try to find Sui digests (base58)
+            const suiMatches = text.match(SUI_DIGEST_PATTERN);
+            console.log('Sui matches:', suiMatches);
+            if (suiMatches && suiMatches.length > 0) {
+                console.log('Found Sui digest:', suiMatches[0]);
+                return suiMatches[0];
+            }
+
+            // Then try hex hashes
+            const hexMatches = text.match(HEX_HASH_PATTERN);
+            console.log('Hex matches:', hexMatches);
+            if (hexMatches && hexMatches.length > 0) {
+                console.log('Found hex hash:', hexMatches[0]);
+                return hexMatches[0];
+            }
+
+            console.log('No transaction hash found');
+            return null;
+        }
+
+        // Test cases
+        const testCases = [
+            "2k5J8...", // Short digest
+            "2k5J8abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789", // Long digest
+            "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", // Hex hash
+            "Hello world 2k5J8abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789 test", // Digest in text
+            "Check this transaction: 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", // Hex in text
+            "No transaction here", // No digest
+            "2k5J8", // Too short
+            "0x123", // Too short hex
+        ];
+
+        const results = document.getElementById('test-results');
+
+        testCases.forEach((testCase, index) => {
+            const result = detectTransactionHash(testCase);
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <h3>Test ${index + 1}: "${testCase}"</h3>
+                <p>Result: ${result || 'No transaction detected'}</p>
+                <hr>
+            `;
+            results.appendChild(div);
+        });
+    </script>
+</body>
+
+</html>

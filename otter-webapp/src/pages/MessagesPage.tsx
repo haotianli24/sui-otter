@@ -4,15 +4,19 @@ import { isValidSuiObjectId } from "@mysten/sui/utils";
 import { SessionKeyProvider } from "../providers/SessionKeyProvider";
 import { MessagingClientProvider } from "../providers/MessagingClientProvider";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { MessagingProvider } from "../contexts/messaging-context";
+import { useMessaging as useMessagingContext } from "../contexts/messaging-context";
+import { Button } from "../components/ui/button";
+import { WalletConnection } from "../components/wallet-connection";
 
-// We'll create simple versions of the components inline for now
-import { CreateChannel } from "../components/messages/CreateChannel";
-import { ChannelList } from "../components/messages/ChannelList";
+// Messaging components
 import { Channel } from "../components/messages/Channel";
-import { MessagingStatus } from "../components/messages/MessagingStatus";
+import { EmptyMessages } from "../components/messages/empty-messages";
+import ContactsSidebar from "../components/messages/ContactsSidebar";
 
 function MessagesPageContent() {
     const currentAccount = useCurrentAccount();
+    const { isReady, isInitializing, initializeSession } = useMessagingContext();
     const [channelId, setChannelId] = useState<string | null>(() => {
         const hash = window.location.hash.slice(1);
         return isValidSuiObjectId(hash) ? hash : null;
@@ -30,33 +34,61 @@ function MessagesPageContent() {
     }, []);
 
     return (
-        <div className="flex-1 overflow-auto p-6">
-            <div className="max-w-5xl mx-auto space-y-6">
-                {currentAccount ? (
-                    channelId ? (
-                        <Channel
-                            channelId={channelId}
-                            onBack={() => {
-                                window.location.hash = '';
-                                setChannelId(null);
-                            }}
-                        />
-                    ) : (
-                        <div className="space-y-6">
-                            <MessagingStatus />
-                            <CreateChannel />
-                            <ChannelList />
-                        </div>
-                    )
-                ) : (
-                    <div className="flex items-center justify-center min-h-[400px]">
-                        <div className="text-center">
-                            <h2 className="text-2xl font-bold mb-4">Welcome to Messages</h2>
-                            <p className="text-muted-foreground mb-6">Please connect your wallet to start messaging</p>
+        <div className="flex-1 overflow-hidden min-h-0">
+            {currentAccount ? (
+                !isReady ? (
+                    <div className="page-container">
+                        <div className="loading-state">
+                            <div className="loading-content">
+                                <h1 className="page-heading">Messaging Setup</h1>
+                                <p className="page-subtitle">Sign once to start the messaging service</p>
+                                <div className="pt-2">
+                                    <Button onClick={initializeSession} disabled={isInitializing}>
+                                        {isInitializing ? 'Initializing…' : 'Initialize Messaging'}
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                )}
-            </div>
+                ) : (
+                    <div className="h-full flex min-h-0">
+                        {/* Contacts sidebar */}
+                        <aside className="w-80 border-r border-border h-full flex flex-col">
+                            <div className="p-6 border-b border-border">
+                                <h1 className="page-heading">Messages</h1>
+                                <p className="page-subtitle">Connect and chat with others</p>
+                            </div>
+                            <ContactsSidebar />
+                        </aside>
+                        {/* Main chat pane */}
+                        <main className="flex-1 h-full flex flex-col min-h-0">
+                            {channelId ? (
+                                <Channel
+                                    channelId={channelId}
+                                    onBack={() => {
+                                        window.location.hash = '';
+                                        setChannelId(null);
+                                    }}
+                                />
+                            ) : (
+                                <EmptyMessages />
+                            )}
+                        </main>
+                    </div>
+                )
+            ) : (
+                <div className="page-container">
+                    <div className="loading-state">
+                        <div className="loading-content">
+                            <h1 className="page-heading">Welcome to Messages</h1>
+                            <p className="page-subtitle">Please sign in to continue</p>
+                            <div className="pt-2 flex justify-center">
+                                <WalletConnection />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -66,9 +98,12 @@ export default function MessagesPage() {
         <ErrorBoundary>
             <SessionKeyProvider>
                 <MessagingClientProvider>
-                    <MessagesPageContent />
+                    <MessagingProvider>
+                        <MessagesPageContent />
+                    </MessagingProvider>
                 </MessagingClientProvider>
             </SessionKeyProvider>
         </ErrorBoundary>
     );
 }
+

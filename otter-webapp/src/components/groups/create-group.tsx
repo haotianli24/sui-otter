@@ -24,7 +24,7 @@ export function CreateGroup({
     const [type, setType] = useState<"free" | "paid">("free");
     const [maxMembers, setMaxMembers] = useState(50);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    
+
     const {
         mutate: signAndExecute,
         isPending,
@@ -35,18 +35,18 @@ export function CreateGroup({
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        
+
         if (!name.trim()) {
             newErrors.name = "Community name is required";
         }
-        
+
         if (!description.trim()) {
             newErrors.description = "Community description is required";
         }
-        
+
         if (type === "paid") {
             if (!price.trim()) {
-                newErrors.price = "Price is required for paid communities";
+                newErrors.price = "Price is required for paid groups";
             } else {
                 const priceValue = parseFloat(price);
                 if (isNaN(priceValue) || priceValue < 0.01 || priceValue > 1000) {
@@ -54,11 +54,11 @@ export function CreateGroup({
                 }
             }
         }
-        
+
         if (maxMembers < 3 || maxMembers > 1000) {
             newErrors.maxMembers = "Max members must be between 3 and 1000";
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -72,7 +72,7 @@ export function CreateGroup({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm() || !currentAccount) {
             return;
         }
@@ -170,7 +170,7 @@ export function CreateGroup({
                         </Select>
                     </div>
 
-                    {/* Price (only for paid communities) */}
+                    {/* Price (only for paid groups) */}
                     {type === "paid" && (
                         <div className="space-y-2">
                             <Label htmlFor="price">Cost (SUI)</Label>
@@ -179,13 +179,13 @@ export function CreateGroup({
                                 type="number"
                                 placeholder="0.1"
                                 value={price}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                const value = e.target.value;
-                                // Allow empty string, numbers, and one decimal point
-                                if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                                    setPrice(value);
-                                }
-                            }}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                    const value = e.target.value;
+                                    // Allow empty string, numbers, and one decimal point
+                                    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                                        setPrice(value);
+                                    }
+                                }}
                                 className={errors.price ? "border-destructive" : ""}
                                 min="0.01"
                                 max="1000"
@@ -226,8 +226,8 @@ export function CreateGroup({
 
                     {/* Submit Buttons */}
                     <div className="flex gap-3 pt-4">
-                        <Button 
-                            type="submit" 
+                        <Button
+                            type="submit"
                             disabled={isPending || !currentAccount}
                             className="flex-1"
                         >

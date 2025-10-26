@@ -1,4 +1,4 @@
-
+"use client";
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Copy, ExternalLink, Bot, Clock, Users, Zap, Loader2, Check } from "lucide-react";
@@ -15,6 +15,7 @@ interface ActivityItemProps {
     gasUsed: string;
     operationsCount: number;
     participants: string[];
+    onViewDetails?: (digest: string) => void;
 }
 
 export function ActivityItem({
@@ -24,7 +25,8 @@ export function ActivityItem({
     type,
     gasUsed,
     operationsCount,
-    participants
+    participants,
+    onViewDetails,
 }: ActivityItemProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [aiExplanation, setAiExplanation] = useState<string | null>(null);
@@ -150,14 +152,14 @@ export function ActivityItem({
                                     <Badge variant="outline" className={getTypeColor()}>
                                         {type}
                                     </Badge>
-                                    <span className="text-sm text-muted-foreground">
+                                    <span className="text-sm muted-text">
                                         {formatTime(timestamp)}
                                     </span>
                                 </div>
                                 <p className="text-sm font-medium truncate">
                                     {getSummaryText()}
                                 </p>
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                <div className="flex items-center gap-4 text-xs muted-text mt-1">
                                     <span className="flex items-center gap-1">
                                         <Zap className="h-3 w-3" />
                                         {gasUsed} SUI
@@ -232,6 +234,9 @@ export function ActivityItem({
                                 size="sm"
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    if (onViewDetails) {
+                                        try { onViewDetails(digest); } catch {}
+                                    }
                                     window.open(`https://suiexplorer.com/txblock/${digest}`, '_blank');
                                 }}
                                 className="flex items-center gap-1 text-xs"
@@ -255,21 +260,21 @@ export function ActivityItem({
                             {/* Transaction Details */}
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <span className="text-muted-foreground">Transaction Hash:</span>
+                                    <span className="muted-text">Transaction Hash:</span>
                                     <p className="font-mono text-xs break-all">{digest}</p>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Sender:</span>
+                                    <span className="muted-text">Sender:</span>
                                     <p className="font-mono text-xs break-all">
                                         {resolveAddressLabel(sender) || formatAddress(sender)}
                                     </p>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Gas Used:</span>
+                                    <span className="muted-text">Gas Used:</span>
                                     <p className="font-medium">{gasUsed} SUI</p>
                                 </div>
                                 <div>
-                                    <span className="text-muted-foreground">Operations:</span>
+                                    <span className="muted-text">Operations:</span>
                                     <p className="font-medium">{operationsCount}</p>
                                 </div>
                             </div>
@@ -277,7 +282,7 @@ export function ActivityItem({
                             {/* Participants */}
                             {participants.length > 0 && (
                                 <div>
-                                    <span className="text-sm text-muted-foreground mb-2 block">
+                                    <span className="text-sm muted-text mb-2 block">
                                         Participants ({participants.length}):
                                     </span>
                                     <div className="flex flex-wrap gap-2">
@@ -304,7 +309,7 @@ export function ActivityItem({
                                         <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">✨ AI</span>
                                     </div>
                                     {isGeneratingAI ? (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-sm muted-text">
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                             Generating explanation...
                                         </div>

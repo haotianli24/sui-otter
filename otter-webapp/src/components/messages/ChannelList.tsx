@@ -51,14 +51,14 @@ export function ChannelList() {
             </CardHeader>
             <CardContent>
                 {!isReady ? (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm muted-text truncate">
                         Waiting for messaging client to initialize...
                     </p>
                 ) : isFetchingChannels && channels.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Loading channels...</p>
+                    <p className="text-sm muted-text">Loading channels...</p>
                 ) : channels.length === 0 ? (
                     <div className="py-8 text-center">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm muted-text">
                             No channels yet. Create one above to start messaging!
                         </p>
                     </div>
@@ -80,9 +80,9 @@ export function ChannelList() {
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="text-sm font-semibold">Channel ID</p>
-                                            <p className="text-xs text-muted-foreground">
+                                            <span className="text-xs muted-text">
                                                 {channel.id.id.slice(0, 16)}...{channel.id.id.slice(-4)}
-                                            </p>
+                                            </span>
                                         </div>
                                         <Badge variant="default">Active</Badge>
                                     </div>

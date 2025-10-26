@@ -18,6 +18,7 @@ export const useMessaging = () => {
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
   const [isFetchingChannels, setIsFetchingChannels] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   // Current channel state
   const [currentChannel, setCurrentChannel] = useState<DecryptedChannelObject | null>(null);
@@ -104,8 +105,21 @@ export const useMessaging = () => {
       return;
     }
 
+    // Don't fetch if already fetching to prevent race conditions
+    if (isFetchingChannels) {
+      return;
+    }
+
+    // Debounce: Don't fetch if we just fetched recently (within 5 seconds)
+    const now = Date.now();
+    if (now - lastFetchTime < 5000) {
+      console.log('[fetchChannels] Skipping fetch - too recent');
+      return;
+    }
+
     setIsFetchingChannels(true);
     setChannelError(null);
+    setLastFetchTime(now);
 
     try {
       const response = await messagingClient.getChannelObjectsByAddress({
@@ -113,7 +127,53 @@ export const useMessaging = () => {
         limit: 10,
       });
 
-      setChannels(response.channelObjects);
+      // Only update channels if they've actually changed to prevent unnecessary re-renders
+      setChannels(prevChannels => {
+        const newChannels = response.channelObjects;
+
+        // Quick length check first
+        if (prevChannels.length !== newChannels.length) {
+          console.log('[fetchChannels] Channel count changed, updating list');
+          return newChannels;
+        }
+
+        // Create maps for efficient comparison
+        const prevChannelMap = new Map(prevChannels.map(ch => [ch.id.id, ch]));
+        const newChannelMap = new Map(newChannels.map(ch => [ch.id.id, ch]));
+
+        // Check if any channels have changed
+        for (const [channelId, newChannel] of newChannelMap) {
+          const prevChannel = prevChannelMap.get(channelId);
+
+          // New channel not in previous list
+          if (!prevChannel) {
+            console.log('[fetchChannels] New channel detected, updating list');
+            return newChannels;
+          }
+
+          // Compare last message timestamps and content
+          const prevLastMessage = prevChannel.last_message;
+          const newLastMessage = newChannel.last_message;
+
+          if (prevLastMessage?.createdAtMs !== newLastMessage?.createdAtMs ||
+            prevLastMessage?.text !== newLastMessage?.text) {
+            console.log('[fetchChannels] Channel message updated, updating list');
+            return newChannels;
+          }
+        }
+
+        // Check if any previous channels are missing
+        for (const channelId of prevChannelMap.keys()) {
+          if (!newChannelMap.has(channelId)) {
+            console.log('[fetchChannels] Channel removed, updating list');
+            return newChannels;
+          }
+        }
+
+        // No changes detected, return previous channels to prevent re-render
+        console.log('[fetchChannels] No changes detected, keeping existing channels');
+        return prevChannels;
+      });
     } catch (err) {
       const errorMsg = err instanceof Error ? `[fetchChannels] ${err.message}` : '[fetchChannels] Failed to fetch channels';
       setChannelError(errorMsg);
@@ -121,7 +181,7 @@ export const useMessaging = () => {
     } finally {
       setIsFetchingChannels(false);
     }
-  }, [messagingClient, currentAccount]);
+  }, [messagingClient, currentAccount, isFetchingChannels, lastFetchTime]);
 
   // Get channel by ID
   const getChannelById = useCallback(async (channelId: string) => {
@@ -149,6 +209,17 @@ export const useMessaging = () => {
       return null;
     }
   }, [messagingClient, currentAccount]);
+
+  // Select channel quickly from local cache if available; otherwise fetch by ID
+  const selectChannel = useCallback(async (channelId: string) => {
+    if (!currentAccount) return null;
+    const local = channels.find((c) => c.id.id === channelId);
+    if (local) {
+      setCurrentChannel(local);
+      return local;
+    }
+    return await getChannelById(channelId);
+  }, [channels, currentAccount, getChannelById]);
 
   // Fetch messages for a channel
   const fetchMessages = useCallback(async (channelId: string, cursor: bigint | null = null) => {
@@ -250,28 +321,28 @@ export const useMessaging = () => {
       }
 
       let finalMessage = message;
-      
+
       // Upload image to Walrus if provided
       if (mediaFile && extendedClient?.storage) {
         try {
           console.log('[sendMessage] Starting Walrus upload workflow...');
-          
+
           // Convert file to Uint8Array
           const arrayBuffer = await mediaFile.arrayBuffer();
           const uint8Array = new Uint8Array(arrayBuffer);
-          
+
           // Use the Walrus storage adapter
           console.log('[sendMessage] Step 1: Uploading to Walrus storage...');
           const uploadResult = await extendedClient.storage.upload([uint8Array], {
             epochs: 3, // Store for 3 epochs (~90 days)
           });
-          
+
           console.log('[sendMessage] Upload result:', uploadResult);
           console.log('[sendMessage] Upload result structure:', typeof uploadResult, Object.keys(uploadResult || {}));
-          
+
           // Extract blob ID from upload result
           let mediaBlobId: string | undefined;
-          
+
           if (typeof uploadResult === 'object' && uploadResult !== null) {
             // Try different possible property names for blob ID
             if ('ids' in uploadResult && Array.isArray(uploadResult.ids) && uploadResult.ids.length > 0) {
@@ -284,12 +355,12 @@ export const useMessaging = () => {
               mediaBlobId = uploadResult.blob_id as string;
             }
           }
-          
+
           if (mediaBlobId) {
             console.log('[sendMessage] Got blob ID from upload:', mediaBlobId);
             console.log('[sendMessage] Blob uploaded successfully, ID:', mediaBlobId);
             console.log('[sendMessage] Note: Blob may take a few moments to become accessible via aggregator');
-            
+
             // Append Walrus reference to message
             finalMessage = `${message}\n[IMAGE:${mediaBlobId}]`;
           } else {
@@ -298,11 +369,11 @@ export const useMessaging = () => {
           }
         } catch (uploadError) {
           console.error('[sendMessage] Failed to upload image to Walrus:', uploadError);
-          
+
           // Fallback: Create a temporary blob ID and store locally
           console.log('[sendMessage] Creating temporary blob ID as fallback...');
           const tempBlobId = `temp_${Date.now()}_${mediaFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-          
+
           // Store file data locally as fallback
           const fileData = {
             name: mediaFile.name,
@@ -311,10 +382,10 @@ export const useMessaging = () => {
             data: Array.from(new Uint8Array(await mediaFile.arrayBuffer())),
             timestamp: Date.now(),
           };
-          
+
           localStorage.setItem(`walrus_temp_${tempBlobId}`, JSON.stringify(fileData));
           console.log('[sendMessage] File stored locally with temp ID:', tempBlobId);
-          
+
           // Append temporary reference to message
           finalMessage = `${message}\n[IMAGE:${tempBlobId}]`;
         }
@@ -357,8 +428,8 @@ export const useMessaging = () => {
   useEffect(() => {
     if (messagingClient && currentAccount) {
       fetchChannels();
-      // Set up auto-refresh every 10 seconds
-      const interval = setInterval(fetchChannels, 10000);
+      // Set up auto-refresh every 60 seconds (increased to reduce unnecessary calls)
+      const interval = setInterval(fetchChannels, 60000);
       return () => clearInterval(interval);
     }
   }, [messagingClient, currentAccount, fetchChannels]);
@@ -382,6 +453,7 @@ export const useMessaging = () => {
     currentChannel,
     messages,
     getChannelById,
+    selectChannel,
     fetchMessages,
     sendMessage,
     isFetchingMessages,

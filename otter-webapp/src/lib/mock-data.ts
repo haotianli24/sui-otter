@@ -305,8 +305,8 @@ export const mockGroupConversations: Conversation[] = [
   },
 ];
 
-// Mock communities for discover page
-export const mockCommunities: Community[] = [
+// Mock groups for discover page
+export const mockGroups: Community[] = [
   {
     id: "comm-1",
     name: "Alpha Traders",

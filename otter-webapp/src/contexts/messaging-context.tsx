@@ -98,7 +98,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     channels,
     messages: messagesRecord,
     currentUser: null, // Not needed with SDK
-    isLoading: sdk.isFetchingChannels || sdk.isFetchingMessages,
+    isLoading: sdk.isFetchingChannels, // Only show loading for channel fetching, not message fetching
     error: sdk.channelError,
     createChannel,
     sendMessage,

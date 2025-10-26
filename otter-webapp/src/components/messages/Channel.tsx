@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useMessaging } from '../../hooks/useMessaging';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { MessageInput } from './message-input';
 import { MessageWithMedia } from './message-with-media';
@@ -37,9 +37,11 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                 fetchMessages(channelId);
             });
 
-            // Auto-refresh messages every 10 seconds
+            // Auto-refresh messages every 10 seconds (only for the current channel)
             const interval = setInterval(() => {
-                fetchMessages(channelId);
+                if (isReady && channelId) {
+                    fetchMessages(channelId);
+                }
             }, 10000);
 
             return () => clearInterval(interval);
@@ -95,17 +97,18 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     }
 
     return (
-        <Card className="flex flex-col h-[calc(100vh-200px)]">
-            <CardHeader className="border-b">
+        <div className="flex flex-col h-full bg-card border border-border">
+            {/* Header */}
+            <div className="border-b border-border flex-shrink-0 p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={onBack}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex-1">
-                        <CardTitle>Channel</CardTitle>
-                        <CardDescription className="text-xs">
+                        <h2 className="text-lg font-semibold">Channel</h2>
+                        <p className="text-xs text-muted-foreground">
                             {channelId.slice(0, 16)}...{channelId.slice(-4)}
-                        </CardDescription>
+                        </p>
                     </div>
                     {currentChannel && (
                         <div className="flex gap-4 text-sm">
@@ -120,9 +123,10 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                         </div>
                     )}
                 </div>
-            </CardHeader>
+            </div>
 
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
                 {hasMoreMessages && (
                     <div className="text-center">
                         <Button
@@ -153,8 +157,8 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                                 >
                                     <div
                                         className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
-                                                ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
-                                                : 'bg-muted border border-border'
+                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
+                                            : 'bg-muted border border-border'
                                             }`}
                                     >
                                         {!isCurrentUser && (
@@ -162,9 +166,11 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                                                 {formatAddress(msg.sender)}
                                             </p>
                                         )}
-                                        <MessageWithMedia 
-                                            content={msg.text} 
-                                            isOwn={isCurrentUser} 
+                                        <MessageWithMedia
+                                            content={msg.text}
+                                            isOwn={isCurrentUser}
+                                            senderName={formatAddress(msg.sender)}
+                                            groupName="Channel"
                                         />
                                         <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
                                             {formatTimestamp(msg.createdAtMs)}
@@ -177,21 +183,22 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                 )}
 
                 <div ref={messagesEndRef} />
-            </CardContent>
+            </div>
 
-            <div className="border-t">
+            {/* Input Area */}
+            <div className="border-t border-border flex-shrink-0">
                 {channelError && (
-                    <div className="p-4 border-b bg-destructive/10 border-destructive/20">
+                    <div className="p-4 border-b border-destructive/20 bg-destructive/10">
                         <p className="text-sm text-destructive">{channelError}</p>
                     </div>
                 )}
 
-                <MessageInput 
+                <MessageInput
                     onSend={handleSendMessage}
                     disabled={isSendingMessage}
                 />
             </div>
-        </Card>
+        </div>
     );
 }
 

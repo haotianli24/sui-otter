@@ -12,53 +12,33 @@ interface GroupGalleryProps {
 }
 
 export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: GroupGalleryProps) {
-  const { 
-    data: groups = [], 
-    isLoading, 
-    error, 
+  const {
+    data: groups = [],
+    isLoading,
     refetch,
-    isRefetching 
+    isRefetching
   } = useUserGroups();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your groups...</p>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="muted-text">Loading your groups...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">{error.message || "Failed to load groups"}</p>
-          <Button onClick={() => refetch()} disabled={isRefetching}>
-            {isRefetching ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Retrying...
-              </>
-            ) : (
-              "Retry"
-            )}
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   if (groups.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-4">
           <Users className="h-12 w-12 text-muted-foreground mx-auto" />
-          <div>
-            <h3 className="text-lg font-semibold">No Groups Yet</h3>
-            <p className="text-muted-foreground">You haven't joined any groups yet. Create your own community or explore existing ones.</p>
+          <div className="space-y-2">
+            <h3 className="card-heading">No Groups Yet</h3>
+            <p className="page-subtitle">You haven't joined any groups yet. Create your own group or explore existing ones.</p>
           </div>
           <div className="flex gap-3 justify-center">
             <Button onClick={onCreateGroup} className="flex items-center gap-2">
@@ -78,11 +58,11 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Your Groups ({groups.length})</h2>
+        <h2 className="card-heading">Your Groups ({groups.length})</h2>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => refetch()} 
-            size="sm" 
+          <Button
+            onClick={() => refetch()}
+            size="sm"
             variant="outline"
             disabled={isRefetching}
             className="flex items-center gap-2"
@@ -103,8 +83,8 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {groups.map((group) => (
-          <Card 
-            key={group.id} 
+          <Card
+            key={group.id}
             className="cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => onSelectGroup(group.id)}
           >
@@ -117,7 +97,7 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base truncate">{group.name}</CardTitle>
+                  <CardTitle className="card-heading truncate">{group.name}</CardTitle>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant={group.type === 'free' ? 'secondary' : 'default'}>
                       {group.type === 'free' ? 'Free' : `${group.price} SUI`}
@@ -130,7 +110,7 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="muted-text line-clamp-2">
                 {group.description}
               </p>
               <div className="flex items-center justify-between mt-3">

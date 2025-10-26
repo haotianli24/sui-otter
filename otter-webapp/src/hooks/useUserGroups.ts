@@ -54,7 +54,7 @@ export function useUserGroups() {
           return [];
         }
 
-        // Step 2: Extract community IDs from MembershipNFTs
+        // Step 2: Extract group IDs from MembershipNFTs
         const communityIds = membershipNfts.data
           .map(nft => {
             const content = nft.data?.content;
@@ -70,7 +70,7 @@ export function useUserGroups() {
           return [];
         }
 
-        // Step 3: Fetch Community objects
+        // Step 3: Fetch Group objects
         const communityObjects = await suiClient.multiGetObjects({
           ids: communityIds,
           options: {
@@ -121,18 +121,18 @@ export function useUserGroups() {
   });
 }
 
-// Hook to fetch all available communities (for discover page)
-export function useAllCommunities() {
+// Hook to fetch all available groups (for discover page)
+export function useAllGroups() {
   return useQuery({
-    queryKey: ['all-communities'],
+    queryKey: ['all-groups'],
     queryFn: async (): Promise<Group[]> => {
       try {
-        const client = new SuiGraphQLClient({ 
-          url: "https://graphql.testnet.sui.io/graphql" 
+        const client = new SuiGraphQLClient({
+          url: "https://graphql.testnet.sui.io/graphql"
         });
 
         const query = graphql(`
-          query GetCommunities($type: String!) {
+          query GetGroups($type: String!) {
             objects(filter: { type: $type }, first: 50) {
               pageInfo {
                 hasNextPage
@@ -160,7 +160,7 @@ export function useAllCommunities() {
 
         if (result.data?.objects) {
           const nodes = result.data.objects.nodes as any[];
-          
+
           const groups: Group[] = nodes
             .map((node) => {
               const fields = node.asMoveObject?.contents?.json;
@@ -191,20 +191,20 @@ export function useAllCommunities() {
 
         return [];
       } catch (error) {
-        console.error('Error fetching all communities:', error);
+        console.error('Error fetching all groups:', error);
         // Return empty array instead of throwing to prevent UI crashes
         return [];
       }
     },
     staleTime: 30 * 1000, // Consider data stale after 30 seconds
-    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for new communities
+    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for new groups
     refetchIntervalInBackground: true, // Continue polling when tab is not active
     refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: 3,
   });
 }
 
-// Hook to fetch members of a specific community
+// Hook to fetch members of a specific group
 export function useCommunityMembers(communityId: string) {
   const suiClient = useSuiClient();
 
@@ -243,8 +243,8 @@ export function useCommunityMembers(communityId: string) {
         ];
 
         // Query MembershipNFT objects using GraphQL
-        const client = new SuiGraphQLClient({ 
-          url: "https://graphql.testnet.sui.io/graphql" 
+        const client = new SuiGraphQLClient({
+          url: "https://graphql.testnet.sui.io/graphql"
         });
 
         const query = graphql(`
@@ -271,7 +271,7 @@ export function useCommunityMembers(communityId: string) {
 
         if (result.data?.objects?.nodes) {
           const membershipNfts = result.data.objects.nodes as any[];
-          
+
           // Filter NFTs that belong to this community
           const communityMemberships = membershipNfts.filter((nft: any) => {
             const fields = nft.asMoveObject?.contents?.json;

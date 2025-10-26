@@ -22,37 +22,37 @@ export default function GroupsPage() {
     const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
     const [showMembers, setShowMembers] = useState(true);
 
-  // Get user's groups for the group list
-  const { data: userGroups = [] } = useUserGroups();
-  
-  // Get group chat data for the selected group
-  const { 
-      data: groupChatData, 
-      isLoading: isLoadingChat, 
-      error: chatError 
-  } = useGroupChat(selectedGroupId || '');
+    // Get user's groups for the group list
+    const { data: userGroups = [] } = useUserGroups();
 
-  // Get messages for the selected group
-  const { 
-      data: messages = [], 
-      isLoading: isLoadingMessages, 
-      error: messagesError 
-  } = useGroupMessages(selectedGroupId || '');
+    // Get group chat data for the selected group
+    const {
+        data: groupChatData,
+        isLoading: isLoadingChat,
+        error: chatError
+    } = useGroupChat(selectedGroupId || '');
 
-  // Debug logging
-  console.log('GroupsPage state:', { 
-    currentView, 
-    selectedGroupId, 
-    isLoadingChat, 
-    chatError: chatError?.message, 
-    hasGroupChatData: !!groupChatData,
-    messagesCount: messages.length,
-    isLoadingMessages
-  });
-  
-  // Get community members for the selected group
-  const { data: communityMembers = [] } = useCommunityMembers(selectedGroupId || '');
-    
+    // Get messages for the selected group
+    const {
+        data: messages = [],
+        isLoading: isLoadingMessages,
+        error: messagesError
+    } = useGroupMessages(selectedGroupId || '');
+
+    // Debug logging
+    console.log('GroupsPage state:', {
+        currentView,
+        selectedGroupId,
+        isLoadingChat,
+        chatError: chatError?.message,
+        hasGroupChatData: !!groupChatData,
+        messagesCount: messages.length,
+        isLoadingMessages
+    });
+
+    // Get community members for the selected group
+    const { data: communityMembers = [] } = useCommunityMembers(selectedGroupId || '');
+
     // Send message mutation
     const sendMessageMutation = useSendGroupMessage();
 
@@ -108,8 +108,8 @@ export default function GroupsPage() {
                 <div className="flex-1 flex items-center justify-center bg-background p-6">
                     <div className="w-full max-w-2xl">
                         <div className="mb-6">
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 onClick={handleBackToGallery}
                                 className="flex items-center gap-2"
                             >
@@ -117,7 +117,7 @@ export default function GroupsPage() {
                                 Back to Groups
                             </Button>
                         </div>
-                        <CreateGroup 
+                        <CreateGroup
                             onCreated={handleGroupCreated}
                             onCancel={handleBackToGallery}
                         />
@@ -163,8 +163,8 @@ export default function GroupsPage() {
                     {/* Left panel - Group list */}
                     <div className="w-80 border-r border-border bg-card">
                         <div className="p-4 border-b border-border">
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 onClick={handleBackToGallery}
                                 className="flex items-center gap-2"
                             >
@@ -177,11 +177,10 @@ export default function GroupsPage() {
                             {userGroups.map((group) => (
                                 <div
                                     key={group.id}
-                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                        selectedGroupId === group.id 
-                                            ? 'bg-primary text-primary-foreground' 
+                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedGroupId === group.id
+                                            ? 'bg-primary text-primary-foreground'
                                             : 'hover:bg-muted'
-                                    }`}
+                                        }`}
                                     onClick={() => setSelectedGroupId(group.id)}
                                 >
                                     <div className="flex items-center gap-3">
@@ -255,50 +254,49 @@ export default function GroupsPage() {
                                 </div>
                             ) : (
                                 messages.map((message) => {
-                                  const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
-                                  return (
-                                    <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
-                                      <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
-                                        {!isOwnMessage && (
-                                          <Avatar className="h-8 w-8 flex-shrink-0">
-                                            <AvatarFallback className="bg-primary text-primary-foreground">
-                                              {message.sender.substring(0, 2).toUpperCase()}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                        )}
-                                        <div className={`flex-1 rounded-lg p-3 ${
-                                          isOwnMessage 
-                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto' 
-                                            : 'bg-muted border border-border'
-                                        }`}>
-                                          {!isOwnMessage && (
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <span className="font-medium text-xs text-muted-foreground">
-                                                {message.sender.substring(0, 8)}...
-                                              </span>
+                                    const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
+                                    return (
+                                        <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
+                                            <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
+                                                {!isOwnMessage && (
+                                                    <Avatar className="h-8 w-8 flex-shrink-0">
+                                                        <AvatarFallback className="bg-primary text-primary-foreground">
+                                                            {message.sender.substring(0, 2).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                )}
+                                                <div className={`flex-1 rounded-lg p-3 ${isOwnMessage
+                                                        ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
+                                                        : 'bg-muted border border-border'
+                                                    }`}>
+                                                    {!isOwnMessage && (
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="font-medium text-xs text-muted-foreground">
+                                                                {message.sender.substring(0, 8)}...
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <p className={`text-sm leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : ''}`}>
+                                                        {message.content}
+                                                    </p>
+                                                </div>
+                                                {isOwnMessage && (
+                                                    <Avatar className="h-8 w-8 flex-shrink-0">
+                                                        <AvatarFallback className="bg-primary text-primary-foreground">
+                                                            {message.sender.substring(0, 2).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                )}
                                             </div>
-                                          )}
-                                          <p className={`text-sm leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : ''}`}>
-                                            {message.content}
-                                          </p>
                                         </div>
-                                        {isOwnMessage && (
-                                          <Avatar className="h-8 w-8 flex-shrink-0">
-                                            <AvatarFallback className="bg-primary text-primary-foreground">
-                                              {message.sender.substring(0, 2).toUpperCase()}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
+                                    );
                                 })
                             )}
                         </div>
 
                         {/* Message input */}
                         {groupChatData.membershipNftId && (
-                            <MessageInput 
+                            <MessageInput
                                 onSend={handleSendMessage}
                                 disabled={sendMessageMutation.isPending}
                             />
@@ -331,7 +329,7 @@ export default function GroupsPage() {
     return (
         <div className="flex h-full">
             <div className="flex-1 p-6 bg-background">
-                <GroupGallery 
+                <GroupGallery
                     onCreateGroup={handleCreateGroup}
                     onExploreGroups={handleExploreGroups}
                     onSelectGroup={handleSelectGroup}

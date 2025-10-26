@@ -79,14 +79,14 @@ export function Sidebar() {
             {/* Sidebar */}
             <div
                 className={cn(
-                    "w-80 h-screen bg-card border-r border-border flex flex-col transition-transform md:translate-x-0 fixed md:relative z-40",
+                    "w-64 h-screen bg-card border-r border-border flex flex-col transition-transform md:translate-x-0 fixed md:relative z-40",
                     isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Logo */}
-                <div className="h-28 flex items-center px-6 border-b border-border">
-                    <h1 className="text-3xl font-bold text-foreground">
-                        OxTTER
+                <div className="h-20 flex items-center px-6 border-b border-border">
+                    <h1 className="text-2xl font-bold text-foreground">
+                        OTTER
                     </h1>
                 </div>
 

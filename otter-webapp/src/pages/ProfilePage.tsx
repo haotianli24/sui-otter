@@ -11,9 +11,9 @@ export default function ProfilePage() {
 
   if (!currentAccount) {
     return (
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-4">Profile</h1>
-        <p className="text-muted-foreground">Please connect your wallet to view your profile.</p>
+      <div className="page-container">
+        <h1 className="page-heading mb-2">Profile</h1>
+        <p className="page-subtitle">Please connect your wallet to view your profile.</p>
       </div>
     );
   }
@@ -29,9 +29,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">My Profile</h1>
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-heading">My Profile</h1>
       </div>
 
       {/* Profile Header Card */}
@@ -48,16 +48,16 @@ export default function ProfilePage() {
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold">Wallet Account</h2>
-              <p className="text-muted-foreground">Connected to Sui Network</p>
+              <h2 className="section-heading">Wallet Account</h2>
+              <p className="page-subtitle">Connected to Sui Network</p>
             </div>
           </div>
 
           {/* Address Section */}
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground">Wallet Address</p>
+            <p className="muted-text">Wallet Address</p>
             <div className="flex items-center justify-between gap-2">
-              <code className="text-sm font-mono break-all">{currentAccount.address}</code>
+              <code className="body-text font-mono break-all">{currentAccount.address}</code>
               <Button
                 variant="outline"
                 size="sm"
@@ -72,16 +72,16 @@ export default function ProfilePage() {
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-4">
             <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-              <p className="text-sm text-muted-foreground">Messages Sent</p>
+              <p className="muted-text">Messages Sent</p>
               <p className="text-2xl font-bold">0</p>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-              <p className="text-sm text-muted-foreground">Channels Joined</p>
+              <p className="muted-text">Channels Joined</p>
               <p className="text-2xl font-bold">0</p>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-              <p className="text-sm text-muted-foreground">Member Since</p>
-              <p className="text-sm font-medium">Today</p>
+              <p className="muted-text">Member Since</p>
+              <p className="body-text font-medium">Today</p>
             </div>
           </div>
         </CardContent>
@@ -96,15 +96,15 @@ export default function ProfilePage() {
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
             <Mail className="h-5 w-5 text-muted-foreground" />
             <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="text-sm">Not set</p>
+              <p className="muted-text">Email</p>
+              <p className="body-text">Not set</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
             <Globe className="h-5 w-5 text-muted-foreground" />
             <div>
-              <p className="text-sm text-muted-foreground">Website</p>
-              <p className="text-sm">Not set</p>
+              <p className="muted-text">Website</p>
+              <p className="body-text">Not set</p>
             </div>
           </div>
         </CardContent>
