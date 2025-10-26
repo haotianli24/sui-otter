@@ -11,6 +11,7 @@ import { useGroupChat, useSendGroupMessage, useGroupMessages } from "@/hooks/use
 import { useUserGroups, useCommunityMembers } from "@/hooks/useUserGroups";
 import { Users as UsersIcon, ArrowLeft, Loader2 } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { getDisplayName, useUsername } from "@/hooks/useUsernameRegistry";
 
 type GroupsView = 'gallery' | 'create' | 'chat';
 
@@ -76,6 +77,44 @@ export default function GroupsPage() {
 
     const handleCreateGroup = () => {
         setCurrentView('create');
+    };
+
+    // Component to display group message with profile picture and username
+    const GroupMessageWithProfile = ({ message, isOwnMessage }: { message: any, isOwnMessage: boolean }) => {
+        const { data: username } = useUsername(message.sender);
+        const displayName = username || getDisplayName(message.sender);
+        const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
+
+        return (
+            <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
+                <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
+                    {/* Profile picture and username for other users */}
+                    {!isOwnMessage && (
+                        <div className="flex flex-col items-center gap-1">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarFallback className="bg-primary text-primary-foreground">
+                                    {avatarFallback}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
+                                {displayName}
+                            </span>
+                        </div>
+                    )}
+                    <div className={`flex-1 rounded-lg p-3 ${isOwnMessage
+                        ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
+                        : 'bg-muted border border-border'
+                    }`}>
+                        <p className={`text-sm leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : ''}`}>
+                            {message.content}
+                        </p>
+                        <p className={`text-xs mt-1 ${isOwnMessage ? 'opacity-70' : 'text-muted-foreground'}`}>
+                            {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     const handleExploreGroups = () => {
@@ -162,7 +201,7 @@ export default function GroupsPage() {
                 <div className="flex h-full">
                     {/* Left panel - Group list */}
                     <div className="w-80 border-r border-border bg-card">
-                        <div className="p-4 border-b border-border">
+                        <div className="h-18 p-4 border-b border-border flex items-center">
                             <Button
                                 variant="ghost"
                                 onClick={handleBackToGallery}
@@ -204,7 +243,7 @@ export default function GroupsPage() {
                     {/* Middle panel - Active group chat */}
                     <div className="flex-1 flex flex-col">
                         {/* Group header */}
-                        <div className="h-28 px-6 border-b border-border bg-card flex items-center justify-between">
+                        <div className="h-18 px-6 border-b border-border bg-card flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                     <AvatarFallback className="bg-primary text-primary-foreground">
@@ -256,43 +295,16 @@ export default function GroupsPage() {
                                 messages.map((message) => {
                                     const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
                                     return (
-                                        <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
-                                            <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
-                                                {!isOwnMessage && (
-                                                    <Avatar className="h-8 w-8 flex-shrink-0">
-                                                        <AvatarFallback className="bg-primary text-primary-foreground">
-                                                            {message.sender.substring(0, 2).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                )}
-                                                <div className={`flex-1 rounded-lg p-3 ${isOwnMessage
-                                                        ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
-                                                        : 'bg-muted border border-border'
-                                                    }`}>
-                                                    {!isOwnMessage && (
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="font-medium text-xs text-muted-foreground">
-                                                                {message.sender.substring(0, 8)}...
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    <p className={`text-sm leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : ''}`}>
-                                                        {message.content}
-                                                    </p>
-                                                </div>
-                                                {isOwnMessage && (
-                                                    <Avatar className="h-8 w-8 flex-shrink-0">
-                                                        <AvatarFallback className="bg-primary text-primary-foreground">
-                                                            {message.sender.substring(0, 2).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                )}
-                                            </div>
-                                        </div>
+                                        <GroupMessageWithProfile 
+                                            key={message.id}
+                                            message={message} 
+                                            isOwnMessage={isOwnMessage} 
+                                        />
                                     );
                                 })
                             )}
                         </div>
+
 
                         {/* Message input */}
                         {groupChatData.membershipNftId && (

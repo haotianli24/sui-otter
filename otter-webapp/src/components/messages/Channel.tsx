@@ -6,6 +6,8 @@ import { Card, CardContent } from '../ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { MessageInput } from './message-input';
 import { MessageWithMedia } from './message-with-media';
+import { getDisplayName, useUsername } from '../../hooks/useUsernameRegistry';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 
 interface ChannelProps {
     channelId: string;
@@ -81,9 +83,45 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const formatAddress = (address: string) => {
-        if (!address) return "Unknown";
-        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+    // Component to display message with profile picture and username
+    const MessageWithProfile = ({ msg, isCurrentUser }: { msg: any, isCurrentUser: boolean }) => {
+        const { data: username } = useUsername(msg.sender);
+        const displayName = username || getDisplayName(msg.sender);
+        const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(msg.sender).slice(0, 2).toUpperCase();
+
+        return (
+            <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} gap-3`}>
+                {/* Profile picture and username for other users */}
+                {!isCurrentUser && (
+                    <div className="flex flex-col items-center gap-1">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                {avatarFallback}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
+                            {displayName}
+                        </span>
+                    </div>
+                )}
+                
+                <div className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
+                    ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
+                    : 'bg-muted border border-border'
+                    }`}>
+                    <MessageWithMedia
+                        content={msg.text}
+                        isOwn={isCurrentUser}
+                        senderName={displayName}
+                        groupName="Channel"
+                    />
+                    <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
+                        {formatTimestamp(msg.createdAtMs)}
+                    </p>
+                </div>
+            </div>
+        );
     };
 
     if (!isReady) {
@@ -151,32 +189,11 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                         {messages.map((msg, i) => {
                             const isCurrentUser = msg.sender === currentAccount?.address;
                             return (
-                                <div
-                                    key={i}
-                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div
-                                        className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
-                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
-                                            : 'bg-muted border border-border'
-                                            }`}
-                                    >
-                                        {!isCurrentUser && (
-                                            <p className="text-xs text-muted-foreground mb-1">
-                                                {formatAddress(msg.sender)}
-                                            </p>
-                                        )}
-                                        <MessageWithMedia
-                                            content={msg.text}
-                                            isOwn={isCurrentUser}
-                                            senderName={formatAddress(msg.sender)}
-                                            groupName="Channel"
-                                        />
-                                        <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
-                                            {formatTimestamp(msg.createdAtMs)}
-                                        </p>
-                                    </div>
-                                </div>
+                                <MessageWithProfile 
+                                    key={i} 
+                                    msg={msg} 
+                                    isCurrentUser={isCurrentUser} 
+                                />
                             );
                         })}
                     </div>
