@@ -18,7 +18,7 @@ export function GroupList({ groups, selectedId, onSelect }: GroupListProps) {
       <div className="p-4 border-b border-border">
         <h2 className="text-lg font-semibold">Groups</h2>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {groups.map((group) => {
           const isSelected = group.id === selectedId;
 
@@ -53,8 +53,8 @@ export function GroupList({ groups, selectedId, onSelect }: GroupListProps) {
                     {group.lastMessage.type === "text"
                       ? group.lastMessage.content
                       : group.lastMessage.type === "trade"
-                      ? "📊 Trade shared"
-                      : "💰 Crypto sent"}
+                        ? "📊 Trade shared"
+                        : "💰 Crypto sent"}
                   </p>
                 )}
               </div>

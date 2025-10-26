@@ -49,13 +49,8 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         }
     }, [isReady, channelId, getChannelById, fetchMessages]);
 
-    // Auto-scroll to bottom when new messages arrive
+    // Reset loading flag after messages update
     useEffect(() => {
-        // Don't scroll if we're loading older messages
-        if (!isLoadingOlderRef.current) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-        // Reset the flag after messages update
         isLoadingOlderRef.current = false;
     }, [messages]);
 
@@ -128,10 +123,10 @@ export function Channel({ channelId, onBack }: ChannelProps) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 bg-background relative">
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-4 min-h-0 bg-background relative">
                 <ZeroBackground />
                 <div
-                    className="relative z-5"
+                    className="relative z-10"
                     onMouseMove={(e) => {
                         // Forward mouse move events to the ZeroBackground
                         const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
@@ -192,14 +187,9 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                                     >
                                         <div
                                             className={`max-w-[70%] rounded-lg p-4 relative z-10 ${isCurrentUser
-                                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                                ? 'bg-gray-100 text-black shadow-sm'
                                                 : 'bg-card border border-border'
                                                 }`}
-                                            style={{
-                                                backgroundColor: isCurrentUser
-                                                    ? 'hsl(var(--primary))'
-                                                    : 'hsl(var(--card))'
-                                            }}
                                         >
                                             {!isCurrentUser && (
                                                 <p className="small-text mb-2">
@@ -212,7 +202,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                                                 senderName={formatAddress(msg.sender)}
                                                 groupName="Channel"
                                             />
-                                            <p className={`small-text mt-2 ${isCurrentUser ? 'opacity-70' : 'muted-text'}`}>
+                                            <p className={`small-text mt-2 ${isCurrentUser ? 'opacity-100' : 'muted-text'}`}>
                                                 {formatTimestamp(msg.createdAtMs)}
                                             </p>
                                         </div>

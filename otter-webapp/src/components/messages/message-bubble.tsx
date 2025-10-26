@@ -156,7 +156,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                         className={cn(
                             "text-xs mt-1",
                             isSent
-                                ? "text-primary-foreground/70"
+                                ? "text-primary-foreground"
                                 : "text-muted-foreground"
                         )}
                     >

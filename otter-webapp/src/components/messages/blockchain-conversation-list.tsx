@@ -35,7 +35,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
 
   if (isLoading && channels.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex items-center space-x-3 p-3">
@@ -53,7 +53,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
 
   if (error) {
     return (
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
         <div className="text-center text-destructive">
           <p className="text-sm">Failed to load conversations</p>
           <p className="text-xs text-muted-foreground mt-1">{error}</p>
@@ -64,7 +64,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
 
   if (channels.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
         <div className="text-center text-muted-foreground">
           <p className="text-sm">No conversations yet</p>
           <p className="text-xs mt-1">Create a new channel to get started</p>
@@ -74,7 +74,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto scrollbar-hide">
       <div className="space-y-1 p-2">
         {channels.map((channel) => (
           <div

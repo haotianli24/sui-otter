@@ -83,7 +83,7 @@ export default function ContactsSidebar() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {!isReady ? (
           <div className="p-6 space-y-4">
             <button

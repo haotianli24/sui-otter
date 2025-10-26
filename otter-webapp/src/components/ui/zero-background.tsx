@@ -7,7 +7,7 @@ interface ZeroBackgroundProps {
 
 export function ZeroBackground({ className }: ZeroBackgroundProps) {
     const [hoveredPosition, setHoveredPosition] = useState<{ row: number; col: number } | null>(null);
-    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0, top: 0, left: 0 });
 
     const handleMouseMove = (e: React.MouseEvent) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -23,8 +23,25 @@ export function ZeroBackground({ className }: ZeroBackgroundProps) {
 
     const updateContainerSize = useCallback((element: HTMLDivElement | null) => {
         if (element) {
-            const rect = element.getBoundingClientRect();
-            setContainerSize({ width: rect.width, height: rect.height });
+            // Get the scrollable parent to position relative to it
+            const scrollableParent = element.closest('.overflow-y-auto');
+            if (scrollableParent) {
+                const parentRect = scrollableParent.getBoundingClientRect();
+                setContainerSize({
+                    width: parentRect.width,
+                    height: parentRect.height,
+                    top: parentRect.top,
+                    left: parentRect.left
+                });
+            } else {
+                const rect = element.getBoundingClientRect();
+                setContainerSize({
+                    width: rect.width,
+                    height: rect.height,
+                    top: rect.top,
+                    left: rect.left
+                });
+            }
         }
     }, []);
 
@@ -33,22 +50,43 @@ export function ZeroBackground({ className }: ZeroBackgroundProps) {
         const handleResize = () => {
             const element = document.querySelector('[data-zero-background]') as HTMLDivElement;
             if (element) {
-                const rect = element.getBoundingClientRect();
-                setContainerSize({ width: rect.width, height: rect.height });
+                const scrollableParent = element.closest('.overflow-y-auto');
+                if (scrollableParent) {
+                    const parentRect = scrollableParent.getBoundingClientRect();
+                    setContainerSize({
+                        width: parentRect.width,
+                        height: parentRect.height,
+                        top: parentRect.top,
+                        left: parentRect.left
+                    });
+                } else {
+                    const rect = element.getBoundingClientRect();
+                    setContainerSize({
+                        width: rect.width,
+                        height: rect.height,
+                        top: rect.top,
+                        left: rect.left
+                    });
+                }
             }
         };
 
         handleResize(); // Initial size
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener('scroll', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('scroll', handleResize);
+        };
     }, []);
 
     const handleMouseLeave = () => {
         setHoveredPosition(null);
     };
 
-    const isHighlighted = (row: number, col: number) => {
-        if (!hoveredPosition) return false;
+    const getOpacity = (row: number, col: number) => {
+        if (!hoveredPosition) return 0.12; // Increased base opacity when not hovering
 
         const { row: hoverRow, col: hoverCol } = hoveredPosition;
 
@@ -60,22 +98,36 @@ export function ZeroBackground({ className }: ZeroBackgroundProps) {
         // Create a more organic, varying shape using noise-like pattern
         const angle = Math.atan2(row - hoverRow, col - hoverCol);
         const noise = Math.sin(angle * 3) * 0.3 + Math.cos(angle * 2) * 0.2;
-        const radius = 1.2 + noise; // Varying radius based on angle
+        const radius = 2.5 + noise; // Reduced radius to 2.5 with variation
 
-        return distance <= radius;
+        if (distance <= radius) {
+            // Create smooth falloff from center to edge
+            const normalizedDistance = distance / radius;
+            // Use exponential falloff for more realistic flashlight effect
+            const opacity = Math.exp(-normalizedDistance * 2.5) * 1.0; // Increased max opacity to 1.0
+            return Math.max(opacity, 0.2); // Increased minimum opacity to 0.2
+        }
+
+        return 0.08; // Slightly increased base opacity
     };
 
     return (
         <div
             ref={updateContainerSize}
             className={cn(
-                "absolute inset-0 pointer-events-auto overflow-hidden",
+                "fixed pointer-events-auto overflow-hidden",
                 "z-0",
                 className
             )}
             data-zero-background
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
+            style={{
+                top: containerSize.top,
+                left: containerSize.left,
+                width: containerSize.width,
+                height: containerSize.height,
+            }}
         >
             {/* Grid pattern background */}
             <div
@@ -96,18 +148,15 @@ export function ZeroBackground({ className }: ZeroBackgroundProps) {
                         {Array.from({ length: Math.ceil(containerSize.width / 16) + 10 }, (_, j) => (
                             <span
                                 key={j}
-                                className={cn(
-                                    "absolute text-xs font-mono transition-colors duration-150",
-                                    isHighlighted(i, j)
-                                        ? "text-blue-500/60"
-                                        : "text-gray-500/20"
-                                )}
+                                className="absolute text-xs font-mono transition-all duration-300"
                                 style={{
                                     left: `${j * 16 + 8}px`,
                                     top: `${i * 16 + 8}px`,
                                     transform: 'translate(-50%, -50%) rotate(-45deg)',
                                     zIndex: 1,
                                     fontVariantNumeric: 'slashed-zero',
+                                    color: `rgba(59, 130, 246, ${getOpacity(i, j)})`, // Blue color with dynamic opacity
+                                    textShadow: getOpacity(i, j) > 0.2 ? `0 0 ${8 + getOpacity(i, j) * 12}px rgba(59, 130, 246, ${getOpacity(i, j) * 0.6})` : 'none',
                                 }}
                             >
                                 0

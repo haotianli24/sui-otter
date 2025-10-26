@@ -85,9 +85,19 @@ export function Sidebar() {
                 )}
             >
                 {/* Logo */}
-                <div className="h-20 flex items-center px-6 border-b border-border">
-                    <h1 className="text-2xl font-bold text-foreground">
-                        OTTER
+                <div className="h-20 flex items-center justify-center px-6 border-b border-border relative">
+                    <h1 className="text-4xl font-bold font-dato flex">
+                        {['o', 't', 't', 'e', 'r'].map((letter, index) => (
+                            <span
+                                key={index}
+                                className="wave-letter"
+                                style={{
+                                    animationDelay: `${index * 0.2}s`,
+                                }}
+                            >
+                                {letter}
+                            </span>
+                        ))}
                     </h1>
                 </div>
 
@@ -119,7 +129,7 @@ export function Sidebar() {
                 {/* Footer */}
                 <div className="p-6 border-t border-border">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <span className="text-sm">Powered by</span>
+                        <span className="text-sm font-dato">POWERED BY SUI</span>
                         <img
                             src={SuiLogo}
                             alt="Sui Logo"

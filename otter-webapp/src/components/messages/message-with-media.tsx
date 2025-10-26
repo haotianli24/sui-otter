@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { ImageIcon, Loader2, Eye, EyeOff } from "lucide-react";
+import { ImageIcon, Loader2, Eye, EyeOff, Video, FileText, File, Download } from "lucide-react";
 import { detectTransactionHash } from "../../lib/transaction-detector";
 import TransactionEmbed from "../transaction/TransactionEmbed";
 import { Button } from "../ui/button";
+import { parseFileReference, getFileUrl, getFallbackFile, getFileIcon, formatFileSize } from "../../lib/walrus-service";
 
 interface MessageWithMediaProps {
   content: string;
@@ -12,67 +13,66 @@ interface MessageWithMediaProps {
 }
 
 export function MessageWithMedia({ content, isOwn, senderName, groupName }: MessageWithMediaProps) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isLoadingImage, setIsLoadingImage] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const [showTransactionEmbed, setShowTransactionEmbed] = useState(true);
+  const [fileMetadata, setFileMetadata] = useState<{
+    category: 'image' | 'video' | 'document' | 'other';
+    filename?: string;
+    size?: number;
+  } | null>(null);
 
-  // Parse message content to extract image reference
+  // Parse message content to extract file reference
   useEffect(() => {
-    const imageMatch = content.match(/\[IMAGE:(.+?)\]/);
-    if (imageMatch) {
-      const walrusRef = imageMatch[1];
-      loadImageFromWalrus(walrusRef);
+    const fileRef = parseFileReference(content);
+    if (fileRef) {
+      loadMediaFromWalrus(fileRef);
     }
   }, [content]);
 
-  const loadImageFromWalrus = async (walrusRef: string) => {
-    setIsLoadingImage(true);
-    setImageError(false);
+  const loadMediaFromWalrus = async (fileRef: { type: 'legacy' | 'new'; category?: 'image' | 'video' | 'document' | 'other'; blobId: string; filename?: string }) => {
+    setIsLoadingMedia(true);
+    setMediaError(false);
 
     try {
-      console.log('Loading image from Walrus:', walrusRef);
+      console.log('Loading media from Walrus:', fileRef);
+
+      // Set file metadata
+      setFileMetadata({
+        category: fileRef.category || 'image',
+        filename: fileRef.filename,
+        size: undefined // We don't have size info from the reference
+      });
 
       // Check if this is a temporary blob ID (starts with "temp_")
-      if (walrusRef.startsWith('temp_')) {
-        console.log('Loading temporary image from localStorage...');
+      if (fileRef.blobId.startsWith('temp_')) {
+        console.log('Loading temporary file from localStorage...');
 
-        const storageKey = `walrus_temp_${walrusRef}`;
-        const storedData = localStorage.getItem(storageKey);
-
-        if (storedData) {
-          const fileData = JSON.parse(storedData);
-          const uint8Array = new Uint8Array(fileData.data);
-          const blob = new Blob([uint8Array], { type: fileData.type });
-          const imageUrl = URL.createObjectURL(blob);
-
-          console.log('Temporary image loaded from localStorage');
-          setImageUrl(imageUrl);
+        const fallbackFile = getFallbackFile(fileRef.blobId);
+        if (fallbackFile) {
+          console.log('Temporary file loaded from localStorage');
+          setMediaUrl(fallbackFile.url);
+          setFileMetadata({
+            category: fallbackFile.metadata.category,
+            filename: fallbackFile.metadata.filename,
+            size: fallbackFile.metadata.size
+          });
           return;
         } else {
-          console.error('Temporary image not found in localStorage');
-          setImageError(true);
+          console.error('Temporary file not found in localStorage');
+          setMediaError(true);
           return;
         }
       }
 
-      // For real Walrus blob IDs, try the aggregator URLs with retry logic
-      let mediaUrl = `https://aggregator.walrus-testnet.walrus.space/v1/${walrusRef}`;
-
-      // Test if the image exists by making a HEAD request
-      let response = await fetch(mediaUrl, { method: 'HEAD' });
-
-      // If not found, try alternative aggregator
-      if (!response.ok) {
-        mediaUrl = `https://aggregator.testnet.walrus.mirai.cloud/v1/${walrusRef}`;
-        response = await fetch(mediaUrl, { method: 'HEAD' });
-      }
-
-      if (response.ok) {
-        console.log('Image found at:', mediaUrl);
-        setImageUrl(mediaUrl);
-      } else {
-        console.warn('Image not immediately available, implementing retry with exponential backoff...');
+      // For real Walrus blob IDs, get the file URL
+      try {
+        const url = await getFileUrl(fileRef.blobId);
+        console.log('File found at:', url);
+        setMediaUrl(url);
+      } catch (error) {
+        console.warn('File not immediately available, implementing retry with exponential backoff...');
 
         // Implement retry with exponential backoff for blob propagation
         let retryCount = 0;
@@ -81,9 +81,9 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
 
         const retryWithBackoff = async () => {
           if (retryCount >= maxRetries) {
-            console.error('Max retries reached, image not found');
-            setImageError(true);
-            setIsLoadingImage(false);
+            console.error('Max retries reached, file not found');
+            setMediaError(true);
+            setIsLoadingMedia(false);
             return;
           }
 
@@ -94,24 +94,12 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
 
           setTimeout(async () => {
             try {
-              let retryUrl = `https://aggregator.walrus-testnet.walrus.space/v1/${walrusRef}`;
-              let retryResponse = await fetch(retryUrl, { method: 'HEAD' });
-
-              if (!retryResponse.ok) {
-                retryUrl = `https://aggregator.testnet.walrus.mirai.cloud/v1/${walrusRef}`;
-                retryResponse = await fetch(retryUrl, { method: 'HEAD' });
-              }
-
-              if (retryResponse.ok) {
-                console.log(`Image found on retry ${retryCount} at:`, retryUrl);
-                setImageUrl(retryUrl);
-                setIsLoadingImage(false);
-              } else {
-                console.warn(`Retry ${retryCount} failed, trying again...`);
-                retryWithBackoff();
-              }
+              const retryUrl = await getFileUrl(fileRef.blobId);
+              console.log(`File found on retry ${retryCount} at:`, retryUrl);
+              setMediaUrl(retryUrl);
+              setIsLoadingMedia(false);
             } catch (retryError) {
-              console.error(`Retry ${retryCount} failed:`, retryError);
+              console.warn(`Retry ${retryCount} failed:`, retryError);
               retryWithBackoff();
             }
           }, delay);
@@ -121,15 +109,15 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
         return; // Keep loading state active during retries
       }
     } catch (error) {
-      console.error('Failed to load image from Walrus:', error);
-      setImageError(true);
+      console.error('Failed to load media from Walrus:', error);
+      setMediaError(true);
     } finally {
-      setIsLoadingImage(false);
+      setIsLoadingMedia(false);
     }
   };
 
-  // Remove image reference from text content
-  const textContent = content.replace(/\[IMAGE:.+?\]/g, '').trim();
+  // Remove file reference from text content
+  const textContent = content.replace(/\[(?:IMAGE|FILE|image|video|document|other):.+?\]/g, '').trim();
 
   // Detect transaction hash in the text content
   const transactionHash = detectTransactionHash(textContent);
@@ -137,31 +125,63 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
 
   return (
     <>
-      {imageUrl && (
+      {mediaUrl && fileMetadata && (
         <div className="mb-2">
-          <a href={imageUrl} target="_blank" rel="noopener noreferrer">
-            <img
-              src={imageUrl}
-              alt="Sent image"
-              className="max-w-full h-auto max-h-[300px] rounded-lg object-cover cursor-pointer"
+          {fileMetadata.category === 'image' && (
+            <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
+              <img
+                src={mediaUrl}
+                alt="Sent image"
+                className="max-w-full h-auto max-h-[300px] rounded-lg object-cover cursor-pointer"
+              />
+            </a>
+          )}
+          {fileMetadata.category === 'video' && (
+            <video
+              src={mediaUrl}
+              controls
+              className="max-w-full h-auto max-h-[300px] rounded-lg"
             />
-          </a>
+          )}
+          {(fileMetadata.category === 'document' || fileMetadata.category === 'other') && (
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[400px]">
+              {(() => {
+                const IconComponent = getFileIcon(fileMetadata.category);
+                return <IconComponent className="h-8 w-8 text-muted-foreground" />;
+              })()}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{fileMetadata.filename || 'File'}</p>
+                {fileMetadata.size && (
+                  <p className="text-xs text-muted-foreground">{formatFileSize(fileMetadata.size)}</p>
+                )}
+              </div>
+              <a
+                href={mediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+              >
+                <Download className="h-3 w-3" />
+                Download
+              </a>
+            </div>
+          )}
         </div>
       )}
-      {isLoadingImage && (
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+      {isLoadingMedia && (
+        <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading image... (retrying if needed)</span>
+          <span>Loading file... (retrying if needed)</span>
         </div>
       )}
-      {imageError && (
-        <div className="flex items-center gap-2 text-destructive mb-2">
+      {mediaError && (
+        <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'text-primary-foreground/80' : 'text-destructive'}`}>
           <ImageIcon className="h-4 w-4" />
-          <span>Failed to load image</span>
+          <span>Failed to load file</span>
         </div>
       )}
       {textContent && (
-        <p className={`text-sm ${isOwn ? 'text-primary-foreground' : ''} whitespace-pre-wrap break-words`}>
+        <p className={`text-sm ${isOwn ? 'text-primary-foreground' : 'text-foreground'} whitespace-pre-wrap break-words`}>
           {textContent}
         </p>
       )}
@@ -173,7 +193,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
             variant="ghost"
             size="sm"
             onClick={() => setShowTransactionEmbed(!showTransactionEmbed)}
-            className={`h-6 px-2 text-xs ${isOwn ? 'text-primary-foreground/70 hover:text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`h-6 px-2 text-xs ${isOwn ? 'text-primary-foreground hover:text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             {showTransactionEmbed ? (
               <>

@@ -20,7 +20,7 @@ export function MemberSidebar({ members, isOpen }: MemberSidebarProps) {
           <h3 className="font-semibold">Members ({members.length})</h3>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-2">
         {members.map((member) => (
           <div
             key={member.id}

@@ -4,6 +4,7 @@ import { useSignAndExecuteTransaction, useCurrentAccount, useSuiClient } from '@
 import { useState, useCallback, useEffect } from 'react';
 import { Transaction } from '@mysten/sui/transactions';
 import { DecryptedChannelObject, DecryptMessageResult, ChannelMessagesDecryptedRequest } from '@mysten/messaging';
+import { getFileCategory } from '../lib/walrus-service';
 
 export const useMessaging = () => {
   const extendedClient = useMessagingClient();
@@ -322,7 +323,7 @@ export const useMessaging = () => {
 
       let finalMessage = message;
 
-      // Upload image to Walrus if provided
+      // Upload file to Walrus if provided
       if (mediaFile && extendedClient?.storage) {
         try {
           console.log('[sendMessage] Starting Walrus upload workflow...');
@@ -361,14 +362,17 @@ export const useMessaging = () => {
             console.log('[sendMessage] Blob uploaded successfully, ID:', mediaBlobId);
             console.log('[sendMessage] Note: Blob may take a few moments to become accessible via aggregator');
 
-            // Append Walrus reference to message
-            finalMessage = `${message}\n[IMAGE:${mediaBlobId}]`;
+            // Get file category for proper formatting
+            const category = getFileCategory(mediaFile.type);
+
+            // Use shorter reference format to avoid encryption issues
+            finalMessage = `${message}\n[${category}:${mediaBlobId}]`;
           } else {
             console.error('[sendMessage] No blob ID found in upload result');
             throw new Error('Failed to extract blob ID from upload result');
           }
         } catch (uploadError) {
-          console.error('[sendMessage] Failed to upload image to Walrus:', uploadError);
+          console.error('[sendMessage] Failed to upload file to Walrus:', uploadError);
 
           // Fallback: Create a temporary blob ID and store locally
           console.log('[sendMessage] Creating temporary blob ID as fallback...');
@@ -386,7 +390,7 @@ export const useMessaging = () => {
           localStorage.setItem(`walrus_temp_${tempBlobId}`, JSON.stringify(fileData));
           console.log('[sendMessage] File stored locally with temp ID:', tempBlobId);
 
-          // Append temporary reference to message
+          // Append temporary reference to message (legacy format for backward compatibility)
           finalMessage = `${message}\n[IMAGE:${tempBlobId}]`;
         }
       }

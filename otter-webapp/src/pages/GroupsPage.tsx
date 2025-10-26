@@ -58,7 +58,7 @@ export default function GroupsPage() {
     // Send message mutation
     const sendMessageMutation = useSendGroupMessage();
 
-    const handleSendMessage = async (content: string) => {
+    const handleSendMessage = async (content: string, mediaFile?: File) => {
         if (!selectedGroupId || !groupChatData?.membershipNftId) {
             console.error('Missing group ID or membership NFT');
             return;
@@ -69,6 +69,7 @@ export default function GroupsPage() {
                 communityId: selectedGroupId,
                 membershipNftId: groupChatData.membershipNftId,
                 content,
+                mediaFile,
             });
             // The mutation will automatically invalidate the queries
         } catch (error) {
@@ -234,7 +235,7 @@ export default function GroupsPage() {
                         </div>
 
                         {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-6 bg-background relative">
+                        <div className="flex-1 overflow-y-auto scrollbar-hide p-6 bg-background relative">
                             <ZeroBackground />
                             <div
                                 className="relative z-5"
@@ -297,14 +298,9 @@ export default function GroupsPage() {
                                                     )}
                                                     <div
                                                         className={`flex-1 rounded-lg p-3 relative z-10 ${isOwnMessage
-                                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
+                                                            ? 'bg-gray-100 text-black shadow-sm ml-auto'
                                                             : 'bg-muted border border-border'
                                                             }`}
-                                                        style={{
-                                                            backgroundColor: isOwnMessage
-                                                                ? 'hsl(var(--primary))'
-                                                                : 'hsl(var(--muted))'
-                                                        }}
                                                     >
                                                         {!isOwnMessage && (
                                                             <div className="flex items-center gap-2 mb-1">
@@ -314,7 +310,7 @@ export default function GroupsPage() {
                                                             </div>
                                                         )}
                                                         <MessageWithMedia
-                                                            content={message.content}
+                                                            content={message.mediaRef ? `${message.content}\n[${message.mediaRef}]` : message.content}
                                                             isOwn={isOwnMessage}
                                                             senderName={message.sender.substring(0, 8) + '...'}
                                                             groupName={groupChatData?.name || "Group"}

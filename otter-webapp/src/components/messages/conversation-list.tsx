@@ -21,7 +21,7 @@ export function ConversationList({
             <div className="p-4 border-b border-border">
                 <h2 className="text-lg font-semibold">Messages</h2>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
                 {conversations.map((conv) => {
                     const otherUser = conv.participants[0];
                     const isSelected = conv.id === selectedId;

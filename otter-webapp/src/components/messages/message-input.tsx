@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Paperclip, Smile } from "lucide-react";
+import { Send, Paperclip, Smile, Video, FileText, File, Image } from "lucide-react";
+import { getFileMetadata, getFileIcon, formatFileSize, validateFile } from "../../lib/walrus-service";
 
 interface MessageInputProps {
     onSend: (content: string, mediaFile?: File) => void;
@@ -13,6 +14,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
     const [message, setMessage] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [fileMetadata, setFileMetadata] = useState<{ filename: string; mimeType: string; size: number; category: 'image' | 'video' | 'document' | 'other' } | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,27 +35,31 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
             setMessage("");
             setSelectedFile(null);
             setPreviewUrl(null);
+            setFileMetadata(null);
         }
     };
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+            // Validate file
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
                 return;
             }
-            
-            // Validate file size (max 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                alert('File size must be less than 10MB');
-                return;
-            }
-            
+
             setSelectedFile(file);
-            const url = URL.createObjectURL(file);
-            setPreviewUrl(url);
+            const metadata = getFileMetadata(file);
+            setFileMetadata(metadata);
+
+            // Create preview URL for images and videos
+            if (metadata.category === 'image' || metadata.category === 'video') {
+                const url = URL.createObjectURL(file);
+                setPreviewUrl(url);
+            } else {
+                setPreviewUrl(null);
+            }
         }
     };
 
@@ -63,6 +69,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
             URL.revokeObjectURL(previewUrl);
             setPreviewUrl(null);
         }
+        setFileMetadata(null);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -75,13 +82,34 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
     return (
         <div className="p-4 border-t border-border bg-card">
             {/* File preview */}
-            {previewUrl && (
+            {selectedFile && fileMetadata && (
                 <div className="mb-3 relative">
-                    <img 
-                        src={previewUrl} 
-                        alt="Preview" 
-                        className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
-                    />
+                    {fileMetadata.category === 'image' && previewUrl && (
+                        <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+                        />
+                    )}
+                    {fileMetadata.category === 'video' && previewUrl && (
+                        <video
+                            src={previewUrl}
+                            className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+                            controls
+                        />
+                    )}
+                    {(fileMetadata.category === 'document' || fileMetadata.category === 'other') && (
+                        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-[300px]">
+                            {(() => {
+                                const IconComponent = getFileIcon(fileMetadata.category);
+                                return <IconComponent className="h-8 w-8 text-muted-foreground" />;
+                            })()}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{fileMetadata.filename}</p>
+                                <p className="text-xs text-muted-foreground">{formatFileSize(fileMetadata.size)}</p>
+                            </div>
+                        </div>
+                    )}
                     <Button
                         variant="destructive"
                         size="icon"
@@ -92,12 +120,11 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
                     </Button>
                 </div>
             )}
-            
+
             <div className="flex items-end gap-2">
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
                     onChange={handleFileSelect}
                     className="hidden"
                 />
@@ -105,7 +132,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
                     variant="ghost"
                     size="icon"
                     className="flex-shrink-0"
-                    title="Attach image"
+                    title="Attach file"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={disabled}
                 >
