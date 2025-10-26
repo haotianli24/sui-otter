@@ -396,15 +396,10 @@ function GroupMessageItem({ message, isOwnMessage, groupName }: GroupMessageItem
                 {/* Message content */}
                 <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
                     <div
-                        className={`px-4 py-2 rounded-2xl ${isOwnMessage
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-card border border-border'
+                        className={`px-4 py-2 rounded-2xl backdrop-blur-md ${isOwnMessage
+                            ? 'bg-card/80 text-card-foreground border border-border/50'
+                            : 'bg-card/80 text-card-foreground border border-border/50'
                             }`}
-                        style={{
-                            backgroundColor: isOwnMessage
-                                ? 'hsl(var(--primary))'
-                                : 'hsl(var(--card))'
-                        }}
                     >
                         <MessageWithMedia
                             content={message.content}
@@ -414,7 +409,7 @@ function GroupMessageItem({ message, isOwnMessage, groupName }: GroupMessageItem
                         />
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        <span className={`text-xs text-muted-foreground`}>
                             {formatTimestamp(message.timestamp)}
                         </span>
                     </div>

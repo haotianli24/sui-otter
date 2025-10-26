@@ -71,41 +71,46 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
         const url = await getFileUrl(fileRef.blobId);
         console.log('File found at:', url);
         setMediaUrl(url);
+        setIsLoadingMedia(false);
+        return;
       } catch (error) {
-        console.warn('File not immediately available, implementing retry with exponential backoff...');
+        console.warn('File not immediately available, trying different approaches...');
 
-        // Implement retry with exponential backoff for blob propagation
-        let retryCount = 0;
-        const maxRetries = 5;
-        const baseDelay = 2000; // 2 seconds
+        // Try multiple approaches with different delays (mainnet is faster)
+        const approaches = [
+          { delay: 1000, name: 'Quick retry' },
+          { delay: 3000, name: 'Standard retry' },
+          { delay: 5000, name: 'Extended retry' }
+        ];
 
-        const retryWithBackoff = async () => {
-          if (retryCount >= maxRetries) {
-            console.error('Max retries reached, file not found');
+        let approachIndex = 0;
+
+        const tryNextApproach = async () => {
+          if (approachIndex >= approaches.length) {
+            console.log('All approaches exhausted - file may not be available yet');
             setMediaError(true);
             setIsLoadingMedia(false);
             return;
           }
 
-          retryCount++;
-          const delay = baseDelay * Math.pow(2, retryCount - 1); // Exponential backoff
-
-          console.log(`Retry ${retryCount}/${maxRetries} after ${delay}ms delay...`);
+          const approach = approaches[approachIndex];
+          console.log(`Trying ${approach.name} after ${approach.delay}ms delay...`);
 
           setTimeout(async () => {
             try {
               const retryUrl = await getFileUrl(fileRef.blobId);
-              console.log(`File found on retry ${retryCount} at:`, retryUrl);
+              console.log(`File found with ${approach.name} at:`, retryUrl);
               setMediaUrl(retryUrl);
               setIsLoadingMedia(false);
             } catch (retryError) {
-              console.warn(`Retry ${retryCount} failed:`, retryError);
-              retryWithBackoff();
+              console.warn(`${approach.name} failed:`, retryError);
+              approachIndex++;
+              tryNextApproach();
             }
-          }, delay);
+          }, approach.delay);
         };
 
-        retryWithBackoff();
+        tryNextApproach();
         return; // Keep loading state active during retries
       }
     } catch (error) {
@@ -175,9 +180,22 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
         </div>
       )}
       {mediaError && (
-        <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'text-primary-foreground/80' : 'text-destructive'}`}>
+        <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'text-primary-foreground/80' : 'text-destructive/70'}`}>
           <ImageIcon className="h-4 w-4" />
-          <span>Failed to load file</span>
+          <span>Image processing...</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const fileRef = parseFileReference(content);
+              if (fileRef) {
+                loadMediaFromWalrus(fileRef);
+              }
+            }}
+            className="ml-2 h-6 px-2 text-xs"
+          >
+            Retry
+          </Button>
         </div>
       )}
       {textContent && (

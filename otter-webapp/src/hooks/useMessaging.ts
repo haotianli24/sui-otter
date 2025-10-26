@@ -335,7 +335,7 @@ export const useMessaging = () => {
           // Use the Walrus storage adapter
           console.log('[sendMessage] Step 1: Uploading to Walrus storage...');
           const uploadResult = await extendedClient.storage.upload([uint8Array], {
-            epochs: 3, // Store for 3 epochs (~90 days)
+            epochs: 10, // Store for 10 epochs (~300 days) - match provider config
           });
 
           console.log('[sendMessage] Upload result:', uploadResult);

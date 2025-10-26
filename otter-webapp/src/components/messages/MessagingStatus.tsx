@@ -51,7 +51,7 @@ export function MessagingStatus() {
 
                 {error && (
                     <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                        <p className="text-sm text-destructive">Error: {error.message}</p>
+                        <p className="text-sm text-destructive/70">Error: {error.message}</p>
                     </div>
                 )}
 
@@ -73,8 +73,8 @@ export function MessagingStatus() {
                 )}
 
                 {isReady && (
-                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
-                        <p className="text-sm text-green-700 dark:text-green-400">
+                    <div className="mt-4 p-3 bg-muted/50 border border-border rounded-md">
+                        <p className="text-sm text-foreground">
                             ✓ Messaging client is ready! You can now use it to send and receive messages.
                         </p>
                     </div>

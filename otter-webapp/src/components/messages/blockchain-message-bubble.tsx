@@ -46,7 +46,7 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
   const handleProfileClick = (address: string, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     const rect = event.currentTarget.getBoundingClientRect();
     setProfilePopup({
       isOpen: true,
@@ -71,7 +71,7 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
       {/* Profile picture and username for other users */}
       {!isOwn && (
         <div className="flex flex-col items-center gap-1">
-          <Avatar 
+          <Avatar
             className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={(e) => handleProfileClick(message.sender, e)}
           >
@@ -87,15 +87,10 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
 
       <div className={`flex flex-col max-w-[70%] ${isOwn ? "items-end" : "items-start"}`}>
         <div
-          className={`px-4 py-2 rounded-2xl ${isOwn
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted"
+          className={`px-4 py-2 rounded-2xl backdrop-blur-md ${isOwn
+            ? "bg-muted/80"
+            : "bg-muted/80"
             }`}
-          style={{
-            backgroundColor: isOwn
-              ? 'hsl(var(--primary))'
-              : 'hsl(var(--muted))'
-          }}
         >
           <p className="text-sm whitespace-pre-wrap break-words">
             {message.content}

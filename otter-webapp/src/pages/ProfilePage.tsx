@@ -15,7 +15,7 @@ export default function ProfilePage() {
   const { profile, updateUsername, updateProfile, isLoading } = useUserProfile();
   const onChainProfile = useOnChainProfile(currentAccount?.address || '');
   const setUsernameMutation = useSetUsername();
-  
+
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -24,7 +24,7 @@ export default function ProfilePage() {
     email: '',
     website: '',
   });
-  
+
   const { data: usernameAvailable, isLoading: checkingAvailability } = useCheckUsernameAvailability(editForm.username);
 
   if (!currentAccount) {
@@ -96,14 +96,14 @@ export default function ProfilePage() {
         email: editForm.email.trim() || undefined,
         website: editForm.website.trim() || undefined,
       });
-      
+
       setIsEditing(false);
     } catch (error: any) {
       console.error('Error saving profile:', error);
-      
+
       // Check for specific error types
-      if (error?.message?.includes('EUsernameAlreadyTaken') || 
-          error?.message?.includes('MoveAbort') && error?.message?.includes('1')) {
+      if (error?.message?.includes('EUsernameAlreadyTaken') ||
+        error?.message?.includes('MoveAbort') && error?.message?.includes('1')) {
         alert('Username is already taken. Please choose a different username.');
       } else if (error?.message?.includes('EUsernameTooLong')) {
         alert('Username is too long. Please choose a shorter username.');
@@ -213,7 +213,7 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">Username *</Label>
@@ -224,7 +224,7 @@ export default function ProfilePage() {
                       onChange={(e) => handleInputChange('username', e.target.value)}
                       placeholder="Enter your username"
                       maxLength={30}
-                      className={editForm.username && !usernameAvailable ? 'border-red-500' : ''}
+                      className={editForm.username && !usernameAvailable ? 'border-red-300' : ''}
                     />
                     {checkingAvailability && (
                       <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin" />
@@ -235,14 +235,14 @@ export default function ProfilePage() {
                       This will be your display name in all groups and messages
                     </p>
                     {editForm.username && usernameAvailable === false && (
-                      <span className="text-xs text-red-500">Username not available</span>
+                      <span className="text-xs text-red-400/70">Username not available</span>
                     )}
                     {editForm.username && usernameAvailable === true && (
-                      <span className="text-xs text-green-500">Username available</span>
+                      <span className="text-xs text-green-400/70">Username available</span>
                     )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -254,7 +254,7 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea
@@ -269,7 +269,7 @@ export default function ProfilePage() {
                   {editForm.bio.length}/200 characters
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="website">Website</Label>
                 <Input
@@ -325,9 +325,9 @@ export default function ProfilePage() {
               <p className="muted-text">Website</p>
               <p className="body-text">
                 {(onChainProfile.data?.website || profile?.website) ? (
-                  <a 
-                    href={onChainProfile.data?.website || profile?.website} 
-                    target="_blank" 
+                  <a
+                    href={onChainProfile.data?.website || profile?.website}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >

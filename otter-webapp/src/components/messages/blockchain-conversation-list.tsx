@@ -54,7 +54,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
   if (error) {
     return (
       <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
-        <div className="text-center text-destructive">
+        <div className="text-center text-destructive/70">
           <p className="text-sm">Failed to load conversations</p>
           <p className="text-xs text-muted-foreground mt-1">{error}</p>
         </div>

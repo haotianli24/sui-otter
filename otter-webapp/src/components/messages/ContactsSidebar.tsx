@@ -104,7 +104,7 @@ export default function ContactsSidebar() {
           </div>
         ) : error ? (
           <div className="p-6 space-y-3">
-            <p className="small-text text-destructive">Error loading conversations: {error}</p>
+            <p className="small-text text-destructive/70">Error loading conversations: {error}</p>
             <button
               onClick={refreshChannels}
               className="small-text px-3 py-1 border rounded bg-card hover:bg-accent transition-smooth"

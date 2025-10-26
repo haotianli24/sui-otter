@@ -40,7 +40,7 @@ export const MessagingClientProvider = ({
     try {
       // Create the extended client with SealClient
       const extendedClient = new SuiClient({
-        url: "https://fullnode.testnet.sui.io:443",
+        url: "https://fullnode.mainnet.sui.io:443",
         mvr: {
           overrides: {
             packages: {
@@ -60,8 +60,8 @@ export const MessagingClientProvider = ({
 
       // Create storage adapter
       const storage = new WalrusStorageAdapter(extendedClient, {
-        publisher: 'https://publisher.walrus-testnet.walrus.space',
-        aggregator: 'https://aggregator.testnet.walrus.mirai.cloud',
+        publisher: 'https://publisher.walrus-mainnet.walrus.space',
+        aggregator: 'https://aggregator.mainnet.walrus.mirai.cloud',
         epochs: 10,
       });
 

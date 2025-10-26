@@ -55,7 +55,7 @@ export function CopyTradeModal({ isOpen, onClose, trade }: CopyTradeModalProps) 
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">Action</span>
                             <span
-                                className={`font-semibold ${trade.action === "buy" ? "text-primary" : "text-destructive"
+                                className={`font-semibold ${trade.action === "buy" ? "text-primary" : "text-destructive/70"
                                     }`}
                             >
                                 {trade.action.toUpperCase()}
@@ -90,7 +90,7 @@ export function CopyTradeModal({ isOpen, onClose, trade }: CopyTradeModalProps) 
 
                     {/* Warning */}
                     <div className="flex gap-2 p-3 bg-destructive/10 border border-destructive/20">
-                        <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="h-4 w-4 text-destructive/70 flex-shrink-0 mt-0.5" />
                         <div className="text-xs text-muted-foreground">
                             <p className="font-medium text-foreground mb-1">
                                 Trading involves risk

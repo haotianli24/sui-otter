@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { 
-    buildFollowTraderTx, 
-    buildUnfollowTraderTx, 
+import {
+    buildFollowTraderTx,
+    buildUnfollowTraderTx,
     getFollowedTraders,
     getCopySettings,
     buildUpdateSettingsTx
@@ -33,7 +33,7 @@ export default function CopyTradingPage() {
     const currentAccount = useCurrentAccount();
     const suiClient = useSuiClient();
     const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-    
+
     const [activeTab, setActiveTab] = useState<'traders' | 'following' | 'history'>('traders');
     const [searchQuery, setSearchQuery] = useState("");
     const [followedTraders, setFollowedTraders] = useState<Set<string>>(new Set());
@@ -44,7 +44,7 @@ export default function CopyTradingPage() {
     const [isInitialized, setIsInitialized] = useState(false);
     const [syncMessage, setSyncMessage] = useState<string | null>(null);
     const [showMigrationBanner, setShowMigrationBanner] = useState(false);
-    
+
     // Settings modal state
     const [settingsModalOpen, setSettingsModalOpen] = useState(false);
     const [selectedTrader, setSelectedTrader] = useState<string | null>(null);
@@ -54,12 +54,12 @@ export default function CopyTradingPage() {
         autoCopyEnabled: boolean;
     }>>({});
     const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
-    
+
     // Settings form state
     const [settingsCopyPercentage, setSettingsCopyPercentage] = useState(10);
     const [settingsMaxTradeSize, setSettingsMaxTradeSize] = useState("100000000");
     const [settingsAutoCopyEnabled, setSettingsAutoCopyEnabled] = useState(true);
-    
+
     // Load followed traders from smart contract on mount
     useEffect(() => {
         const loadFollowedTraders = async () => {
@@ -71,20 +71,20 @@ export default function CopyTradingPage() {
                 setIsInitialized(true);
                 return;
             }
-            
+
             try {
                 console.log('🔍 Loading followed traders from smart contract...');
                 const followed = await getFollowedTraders(suiClient, currentAccount.address);
                 console.log('✅ Loaded followed traders from contract:', followed);
-                
+
                 // If contract is empty, check wallet-specific localStorage for migration
                 if (followed.length === 0) {
                     const walletKey = `followedTraders_${currentAccount.address}`;
                     const saved = localStorage.getItem(walletKey);
-                    
+
                     // Also check old global key for backwards compatibility
                     const oldSaved = !saved ? localStorage.getItem('followedTraders') : null;
-                    
+
                     const localData = saved || oldSaved;
                     if (localData) {
                         try {
@@ -94,7 +94,7 @@ export default function CopyTradingPage() {
                                 console.log('💡 Tip: Click "Follow" again to save these to the blockchain');
                                 setFollowedTraders(new Set(localFollows));
                                 setShowMigrationBanner(true);
-                                
+
                                 // Save to wallet-specific key
                                 localStorage.setItem(walletKey, JSON.stringify(localFollows));
                                 return; // Skip setting empty contract data
@@ -104,7 +104,7 @@ export default function CopyTradingPage() {
                         }
                     }
                 }
-                
+
                 setFollowedTraders(new Set(followed));
             } catch (error) {
                 console.error('❌ Error loading followed traders from contract:', error);
@@ -130,38 +130,38 @@ export default function CopyTradingPage() {
                 setIsInitialized(true);
             }
         };
-        
+
         loadFollowedTraders();
     }, [currentAccount?.address, suiClient]);
-    
+
     // Save to wallet-specific localStorage whenever followedTraders changes (after initialization)
     useEffect(() => {
         if (!isInitialized || !currentAccount?.address) return;
-        
+
         const walletKey = `followedTraders_${currentAccount.address}`;
         localStorage.setItem(walletKey, JSON.stringify(Array.from(followedTraders)));
-        
+
         console.log(`💾 Saved follows for wallet ${currentAccount.address.slice(0, 8)}...`);
     }, [followedTraders, isInitialized, currentAccount?.address]);
-    
+
     // Save traders list to localStorage whenever it changes (after initialization)
     useEffect(() => {
         if (!isInitialized) return;
-        
+
         localStorage.setItem('tradersList', JSON.stringify(traders));
     }, [traders, isInitialized]);
-    
+
     // Load settings for each followed trader
     useEffect(() => {
         const loadSettings = async () => {
             if (!currentAccount?.address || followedTraders.size === 0) return;
-            
+
             const settingsMap: Record<string, {
                 copyPercentage: number;
                 maxTradeSize: string;
                 autoCopyEnabled: boolean;
             }> = {};
-            
+
             for (const traderAddress of Array.from(followedTraders)) {
                 try {
                     const settings = await getCopySettings(suiClient, currentAccount.address, traderAddress);
@@ -185,13 +185,13 @@ export default function CopyTradingPage() {
                     };
                 }
             }
-            
+
             setTraderSettings(settingsMap);
         };
-        
+
         loadSettings();
     }, [currentAccount?.address, followedTraders, suiClient]);
-    
+
     // Load trade history on mount and periodically (wallet-specific)
     useEffect(() => {
         // Clear history if no wallet connected
@@ -199,7 +199,7 @@ export default function CopyTradingPage() {
             setCopiedTrades([]);
             return;
         }
-        
+
         const loadTradeHistory = async () => {
             try {
                 setIsLoadingHistory(true);
@@ -207,13 +207,13 @@ export default function CopyTradingPage() {
                 if (response.ok) {
                     const data = await response.json();
                     console.log('📊 Trade history loaded:', data.totalTrades, 'total trades');
-                    
+
                     if (data.trades && data.trades.length > 0) {
                         // Filter trades for current wallet only
-                        const myTrades = data.trades.filter((t: any) => 
+                        const myTrades = data.trades.filter((t: any) =>
                             t.follower === currentAccount.address
                         );
-                        
+
                         const trades = myTrades.map((t: any) => ({
                             trader: t.trader.slice(0, 6) + '...' + t.trader.slice(-4),
                             asset: t.asset,
@@ -237,40 +237,40 @@ export default function CopyTradingPage() {
                 setIsLoadingHistory(false);
             }
         };
-        
+
         loadTradeHistory();
-        
+
         // Refresh history every 10 seconds
         const interval = setInterval(loadTradeHistory, 10000);
         return () => clearInterval(interval);
     }, [currentAccount?.address]);
-    
+
     // Handle follow/unfollow via smart contract
     const handleFollowToggle = async (address: string) => {
         if (!currentAccount?.address) {
             alert('Please connect your wallet first');
             return;
         }
-        
+
         console.log('🔘 Follow button clicked for:', address);
         setIsFollowing(address);
-        
+
         const wasFollowing = followedTraders.has(address);
         console.log(`📊 Current state: ${wasFollowing ? 'Following' : 'Not following'}`);
-        
+
         try {
             // Build transaction
             const tx = wasFollowing ? buildUnfollowTraderTx(address) : buildFollowTraderTx(address);
-            
+
             console.log(`📝 Submitting ${wasFollowing ? 'unfollow' : 'follow'} transaction to blockchain...`);
-            
+
             // Execute transaction
             signAndExecute(
                 { transaction: tx },
                 {
                     onSuccess: (result) => {
                         console.log('✅ Transaction successful:', result.digest);
-                        
+
                         // Update UI
                         setFollowedTraders(prev => {
                             const newSet = new Set(prev);
@@ -283,10 +283,10 @@ export default function CopyTradingPage() {
                             }
                             return newSet;
                         });
-                        
+
                         // The agent will automatically pick this up from the smart contract events!
                         console.log('🤖 Agent will automatically detect this change from the smart contract');
-                        
+
                         setIsFollowing(null);
                     },
                     onError: (error) => {
@@ -302,7 +302,7 @@ export default function CopyTradingPage() {
             setIsFollowing(null);
         }
     };
-    
+
     // Open settings modal
     const handleOpenSettings = (traderAddress: string) => {
         setSelectedTrader(traderAddress);
@@ -316,13 +316,13 @@ export default function CopyTradingPage() {
         setSettingsAutoCopyEnabled(settings.autoCopyEnabled);
         setSettingsModalOpen(true);
     };
-    
+
     // Update settings on blockchain
     const handleUpdateSettings = async () => {
         if (!currentAccount?.address || !selectedTrader) return;
-        
+
         setIsUpdatingSettings(true);
-        
+
         try {
             const tx = buildUpdateSettingsTx(
                 selectedTrader,
@@ -330,15 +330,15 @@ export default function CopyTradingPage() {
                 settingsMaxTradeSize,
                 settingsAutoCopyEnabled
             );
-            
+
             console.log(`📝 Updating settings for trader ${selectedTrader}...`);
-            
+
             signAndExecute(
                 { transaction: tx },
                 {
                     onSuccess: (result) => {
                         console.log('✅ Settings updated successfully:', result.digest);
-                        
+
                         // Update local state
                         setTraderSettings(prev => ({
                             ...prev,
@@ -348,7 +348,7 @@ export default function CopyTradingPage() {
                                 autoCopyEnabled: settingsAutoCopyEnabled
                             }
                         }));
-                        
+
                         setIsUpdatingSettings(false);
                         setSettingsModalOpen(false);
                         setSelectedTrader(null);
@@ -366,23 +366,23 @@ export default function CopyTradingPage() {
             setIsUpdatingSettings(false);
         }
     };
-    
+
     // Add custom trader from search
     const handleAddTrader = async () => {
         if (!searchQuery.trim()) return;
-        
+
         // Validate address format
         if (!searchQuery.startsWith('0x') || searchQuery.length !== 66) {
             alert('Invalid Sui address format. Address should start with 0x and be 66 characters long.');
             return;
         }
-        
+
         // Check if already exists
         if (traders.some(t => t.address === searchQuery)) {
             alert('This trader is already in your list!');
             return;
         }
-        
+
         // Add new trader with placeholder while loading
         const tempTrader: Trader = {
             address: searchQuery,
@@ -391,33 +391,33 @@ export default function CopyTradingPage() {
             profitLoss: "Loading...",
             isFollowing: false
         };
-        
+
         setTraders(prev => [tempTrader, ...prev]);
         const addedAddress = searchQuery;
         setSearchQuery("");
-        
+
         // Fetch real stats from blockchain
         try {
             const stats = await fetchTraderStats(addedAddress);
-            setTraders(prev => prev.map(t => 
+            setTraders(prev => prev.map(t =>
                 t.address === addedAddress ? { ...t, ...stats } : t
             ));
         } catch (error) {
             console.error('Failed to fetch trader stats:', error);
             // Update with error state
-            setTraders(prev => prev.map(t => 
-                t.address === addedAddress 
-                    ? { ...t, profitLoss: "Unable to load", totalTrades: 0 } 
+            setTraders(prev => prev.map(t =>
+                t.address === addedAddress
+                    ? { ...t, profitLoss: "Unable to load", totalTrades: 0 }
                     : t
             ));
         }
     };
-    
+
     // Fetch trader statistics from blockchain
     const fetchTraderStats = async (address: string) => {
         try {
             console.log('🔍 Fetching stats for:', address);
-            
+
             // Try using Sui RPC directly instead of Suiscan
             const response = await fetch('https://fullnode.testnet.sui.io:443', {
                 method: 'POST',
@@ -442,22 +442,22 @@ export default function CopyTradingPage() {
                     ]
                 })
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 console.log('✅ Got response:', data);
-                
+
                 const txCount = data.result?.data?.length || 0;
-                
+
                 return {
                     totalTrades: txCount,
                     profitLoss: txCount > 0 ? "Active" : "New Wallet",
                     followers: 0
                 };
             }
-            
+
             console.warn('⚠️ API response not ok:', response.status);
-            
+
             // Fallback: just show as valid wallet
             return {
                 totalTrades: 0,
@@ -466,7 +466,7 @@ export default function CopyTradingPage() {
             };
         } catch (error) {
             console.error('❌ Error fetching trader stats:', error);
-            
+
             // Even if we can't fetch stats, the wallet is valid
             // Just show it as a valid wallet
             return {
@@ -476,7 +476,7 @@ export default function CopyTradingPage() {
             };
         }
     };
-    
+
     // Export followed traders for agent
     const handleExportForAgent = () => {
         const data = {
@@ -484,9 +484,9 @@ export default function CopyTradingPage() {
             timestamp: new Date().toISOString(),
             source: "webapp"
         };
-        
+
         const jsonStr = JSON.stringify(data, null, 2);
-        
+
         // Copy to clipboard
         navigator.clipboard.writeText(jsonStr).then(() => {
             setSyncMessage('✅ Synced successfully! Agent will update within 10 seconds.');
@@ -497,7 +497,7 @@ export default function CopyTradingPage() {
             setTimeout(() => setSyncMessage(null), 5000);
         });
     };
-    
+
     // Filter traders based on search and following status
     const filteredTraders = traders.filter(trader => {
         const matchesSearch = trader.address.toLowerCase().includes(searchQuery.toLowerCase());
@@ -506,16 +506,16 @@ export default function CopyTradingPage() {
         ...trader,
         isFollowing: followedTraders.has(trader.address)
     }));
-    
+
     // Build followingTraders list - includes both known traders and followed addresses not in traders list
     const followingTraders = (() => {
         const result: Trader[] = [];
-        
+
         // Add known traders that are being followed
         traders.filter(t => followedTraders.has(t.address)).forEach(trader => {
             result.push({ ...trader, isFollowing: true });
         });
-        
+
         // Add followed addresses that aren't in the traders list
         followedTraders.forEach(address => {
             if (!traders.some(t => t.address === address)) {
@@ -528,7 +528,7 @@ export default function CopyTradingPage() {
                 });
             }
         });
-        
+
         return result;
     })();
 
@@ -546,28 +546,27 @@ export default function CopyTradingPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="page-container">
             {/* Header */}
-            <div className="border-b border-border bg-card px-6 py-4">
-                <h1 className="text-2xl font-bold flex items-center gap-2">
+            <div className="page-header">
+                <h1 className="page-heading flex items-center gap-2">
                     <TrendingUp className="h-6 w-6 text-primary" />
                     Agents
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="page-subtitle">
                     AI agents that automatically copy trades from top traders
                 </p>
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-border bg-card px-6">
-                <div className="flex gap-6">
+            <div className="section-container">
+                <div className="flex gap-6 border-b border-border">
                     <button
                         onClick={() => setActiveTab('traders')}
-                        className={`py-3 px-1 border-b-2 transition-colors ${
-                            activeTab === 'traders'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`py-3 px-1 border-b-2 transition-colors ${activeTab === 'traders'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
                     >
                         <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
@@ -576,11 +575,10 @@ export default function CopyTradingPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('following')}
-                        className={`py-3 px-1 border-b-2 transition-colors ${
-                            activeTab === 'following'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`py-3 px-1 border-b-2 transition-colors ${activeTab === 'following'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
                     >
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4" />
@@ -589,11 +587,10 @@ export default function CopyTradingPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
-                        className={`py-3 px-1 border-b-2 transition-colors ${
-                            activeTab === 'history'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
+                        className={`py-3 px-1 border-b-2 transition-colors ${activeTab === 'history'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
                     >
                         <div className="flex items-center gap-2">
                             <Activity className="h-4 w-4" />
@@ -604,21 +601,21 @@ export default function CopyTradingPage() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="section-container">
                 {/* Migration Banner */}
                 {showMigrationBanner && (
                     <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 text-blue-600">ℹ️</div>
                             <div className="flex-1">
-                                <h3 className="font-semibold text-blue-900 mb-1">Local Follows Detected</h3>
-                                <p className="text-sm text-blue-800 mb-2">
+                                <h3 className="card-heading text-blue-900 mb-1">Local Follows Detected</h3>
+                                <p className="small-text text-blue-800 mb-2">
                                     Your follows from before are still here! To make them permanent and enable the agent to monitor them,
                                     please click "Follow" on each trader again to save them to the blockchain.
                                 </p>
                                 <button
                                     onClick={() => setShowMigrationBanner(false)}
-                                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                    className="small-text text-blue-600 hover:text-blue-800 underline"
                                 >
                                     Dismiss
                                 </button>
@@ -647,21 +644,21 @@ export default function CopyTradingPage() {
                                 Add
                             </Button>
                         </div>
-                        
-                        <div className="text-sm text-muted-foreground">
+
+                        <div className="muted-text">
                             {searchQuery ? `Search results for "${searchQuery}"` : 'Add traders to start monitoring their transactions'}
                         </div>
-                        
+
                         {filteredTraders.length === 0 && !searchQuery && (
                             <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
                                 <Search className="h-12 w-12 mx-auto mb-3 opacity-50 text-muted-foreground" />
-                                <h3 className="text-lg font-semibold mb-2">No Traders Yet</h3>
-                                <p className="text-muted-foreground mb-4">
+                                <h3 className="card-heading mb-2">No Traders Yet</h3>
+                                <p className="muted-text mb-4">
                                     Paste a Sui wallet address above to get started
                                 </p>
                             </div>
                         )}
-                        
+
                         <div className="grid gap-4">
                             {filteredTraders.map((trader) => (
                                 <div
@@ -681,24 +678,23 @@ export default function CopyTradingPage() {
                                                 )}
                                                 <Badge
                                                     variant="outline"
-                                                    className={`text-xs ${
-                                                        trader.profitLoss.startsWith('+')
-                                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                                            : trader.profitLoss === 'Active'
+                                                    className={`text-xs ${trader.profitLoss.startsWith('+')
+                                                        ? 'bg-green-50/30 text-green-600/70 border-green-200/50'
+                                                        : trader.profitLoss === 'Active'
                                                             ? 'bg-blue-50 text-blue-700 border-blue-200'
                                                             : trader.profitLoss === 'Loading...'
-                                                            ? 'bg-gray-50 text-gray-700 border-gray-200 animate-pulse'
-                                                            : trader.profitLoss === 'New Wallet' || trader.profitLoss === 'Valid Wallet'
-                                                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                            : trader.profitLoss === 'No Activity'
-                                                            ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                                                            : 'bg-gray-50 text-gray-700 border-gray-200'
-                                                    }`}
+                                                                ? 'bg-gray-50 text-gray-700 border-gray-200 animate-pulse'
+                                                                : trader.profitLoss === 'New Wallet' || trader.profitLoss === 'Valid Wallet'
+                                                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                    : trader.profitLoss === 'No Activity'
+                                                                        ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                                                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                                                        }`}
                                                 >
                                                     {trader.profitLoss}
                                                 </Badge>
                                             </div>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                            <div className="flex items-center gap-4 small-text">
                                                 <span>{trader.totalTrades} trades</span>
                                                 <span>•</span>
                                                 <span>Active trader</span>
@@ -707,7 +703,7 @@ export default function CopyTradingPage() {
                                         <Button
                                             variant={trader.isFollowing ? "outline" : "default"}
                                             size="sm"
-                                            className={`ml-4 ${trader.isFollowing ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100' : ''}`}
+                                            className={`ml-4 ${trader.isFollowing ? 'bg-green-50/30 text-green-600/70 border-green-300/50 hover:bg-green-100/30' : ''}`}
                                             onClick={() => handleFollowToggle(trader.address)}
                                             disabled={isFollowing === trader.address}
                                         >
@@ -735,13 +731,13 @@ export default function CopyTradingPage() {
                 {activeTab === 'following' && (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <div className="text-sm text-muted-foreground">
+                            <div className="muted-text">
                                 Traders you're currently following ({followingTraders.length})
                             </div>
                             {followingTraders.length > 0 && (
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={handleExportForAgent}
                                     className="flex items-center gap-2"
                                 >
@@ -750,18 +746,17 @@ export default function CopyTradingPage() {
                                 </Button>
                             )}
                         </div>
-                        
+
                         {/* Sync success message */}
                         {syncMessage && (
-                            <div className={`p-3 rounded-lg text-sm ${
-                                syncMessage.includes('✅') 
-                                    ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                                    : 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
-                            }`}>
+                            <div className={`p-3 rounded-lg small-text ${syncMessage.includes('✅')
+                                ? 'bg-green-50/30 dark:bg-green-950/30 text-green-600/70 dark:text-green-400/70 border border-green-200/50 dark:border-green-800/50'
+                                : 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
+                                }`}>
                                 {syncMessage}
                             </div>
                         )}
-                        
+
                         <div className="grid gap-4">
                             {followingTraders.map((trader) => (
                                 <div
@@ -775,22 +770,21 @@ export default function CopyTradingPage() {
                                                     {formatAddress(trader.address)}
                                                 </span>
                                                 {traderSettings[trader.address] && (
-                                                    <Badge 
-                                                        variant="outline" 
-                                                        className={`text-xs ${
-                                                            traderSettings[trader.address].autoCopyEnabled 
-                                                                ? 'bg-green-50 text-green-700 border-green-200' 
-                                                                : 'bg-gray-50 text-gray-700 border-gray-200'
-                                                        }`}
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`text-xs ${traderSettings[trader.address].autoCopyEnabled
+                                                            ? 'bg-green-50/30 text-green-600/70 border-green-200/50'
+                                                            : 'bg-gray-50 text-gray-700 border-gray-200'
+                                                            }`}
                                                     >
                                                         Auto-copy {traderSettings[trader.address].autoCopyEnabled ? 'ON' : 'OFF'}
                                                     </Badge>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-muted-foreground">
+                                            <div className="small-text">
                                                 {traderSettings[trader.address] ? (
                                                     <>
-                                                        Copy: {traderSettings[trader.address].copyPercentage}% of position size • 
+                                                        Copy: {traderSettings[trader.address].copyPercentage}% of position size •
                                                         Max: {(parseInt(traderSettings[trader.address].maxTradeSize) / 1_000_000_000).toFixed(2)} SUI
                                                     </>
                                                 ) : (
@@ -799,20 +793,20 @@ export default function CopyTradingPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button 
-                                                variant="outline" 
+                                            <Button
+                                                variant="outline"
                                                 size="sm"
                                                 onClick={() => handleOpenSettings(trader.address)}
                                             >
                                                 <Settings className="h-3 w-3 mr-1" />
                                                 Settings
                                             </Button>
-                                            <Button 
-                                                variant="outline" 
+                                            <Button
+                                                variant="outline"
                                                 size="sm"
                                                 onClick={() => handleFollowToggle(trader.address)}
                                                 disabled={isFollowing === trader.address}
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                className="text-red-400/70 hover:text-red-500/80 hover:bg-red-50/30"
                                             >
                                                 {isFollowing === trader.address ? (
                                                     <>
@@ -831,10 +825,10 @@ export default function CopyTradingPage() {
                                 </div>
                             ))}
                             {followingTraders.length === 0 && (
-                                <div className="text-center py-12 text-muted-foreground">
+                                <div className="text-center py-12 muted-text">
                                     <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
                                     <p>You're not following any traders yet</p>
-                                    <p className="text-sm mt-1">Browse popular traders to get started</p>
+                                    <p className="small-text mt-1">Browse popular traders to get started</p>
                                 </div>
                             )}
                         </div>
@@ -843,11 +837,11 @@ export default function CopyTradingPage() {
 
                 {activeTab === 'history' && (
                     <div className="space-y-4">
-                        <div className="text-sm text-muted-foreground">
+                        <div className="muted-text">
                             Your copied trades history (Auto-refreshes every 10s)
                         </div>
                         {isLoadingHistory && copiedTrades.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">
+                            <div className="text-center py-12 muted-text">
                                 <Activity className="h-12 w-12 mx-auto mb-3 opacity-50 animate-pulse" />
                                 <p>Loading trade history...</p>
                             </div>
@@ -866,18 +860,18 @@ export default function CopyTradingPage() {
                                                         {trade.action}
                                                     </Badge>
                                                     {trade.success ? (
-                                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400">
+                                                        <Badge variant="outline" className="text-xs bg-green-50/30 text-green-600/70 dark:bg-green-950/30 dark:text-green-400/70">
                                                             <Check className="h-2 w-2 mr-1" />
                                                             Detected
                                                         </Badge>
                                                     ) : (
-                                                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400">
+                                                        <Badge variant="outline" className="text-xs bg-red-50/30 text-red-600/70 dark:bg-red-950/30 dark:text-red-400/70">
                                                             <X className="h-2 w-2 mr-1" />
                                                             Failed
                                                         </Badge>
                                                     )}
                                                 </div>
-                                                <div className="text-sm text-muted-foreground">
+                                                <div className="small-text">
                                                     From {trade.trader} • Amount: {trade.amount} SUI • {formatTime(trade.timestamp)}
                                                 </div>
                                             </div>
@@ -885,10 +879,10 @@ export default function CopyTradingPage() {
                                     </div>
                                 ))}
                                 {copiedTrades.length === 0 && (
-                                    <div className="text-center py-12 text-muted-foreground">
+                                    <div className="text-center py-12 muted-text">
                                         <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
                                         <p>No copied trades yet</p>
-                                        <p className="text-sm mt-1">Agent will detect and show trades here</p>
+                                        <p className="small-text mt-1">Agent will detect and show trades here</p>
                                     </div>
                                 )}
                             </div>
@@ -896,13 +890,13 @@ export default function CopyTradingPage() {
                     </div>
                 )}
             </div>
-            
+
             {/* Settings Modal */}
             {settingsModalOpen && selectedTrader && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-card border border-border rounded-lg max-w-md w-full p-6 shadow-lg">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold">Copy Trading Settings</h2>
+                            <h2 className="card-heading">Copy Trading Settings</h2>
                             <button
                                 onClick={() => setSettingsModalOpen(false)}
                                 className="text-muted-foreground hover:text-foreground"
@@ -910,12 +904,12 @@ export default function CopyTradingPage() {
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        
+
                         <div className="mb-4 p-3 bg-muted rounded-md">
                             <div className="text-sm text-muted-foreground mb-1">Trader Address</div>
                             <div className="font-mono text-sm">{formatAddress(selectedTrader)}</div>
                         </div>
-                        
+
                         <div className="space-y-4">
                             {/* Auto-copy toggle */}
                             <div className="flex items-center justify-between p-3 border border-border rounded-lg">
@@ -927,18 +921,16 @@ export default function CopyTradingPage() {
                                 </div>
                                 <button
                                     onClick={() => setSettingsAutoCopyEnabled(!settingsAutoCopyEnabled)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                        settingsAutoCopyEnabled ? 'bg-green-600' : 'bg-gray-300'
-                                    }`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settingsAutoCopyEnabled ? 'bg-green-500/70' : 'bg-gray-300'
+                                        }`}
                                 >
                                     <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                            settingsAutoCopyEnabled ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settingsAutoCopyEnabled ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
                                     />
                                 </button>
                             </div>
-                            
+
                             {/* Copy percentage */}
                             <div>
                                 <label className="block text-sm font-medium mb-2">
@@ -959,7 +951,7 @@ export default function CopyTradingPage() {
                                     Copy {settingsCopyPercentage}% of each trade's position size
                                 </div>
                             </div>
-                            
+
                             {/* Max trade size */}
                             <div>
                                 <label className="block text-sm font-medium mb-2">
@@ -980,7 +972,7 @@ export default function CopyTradingPage() {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div className="flex gap-2 mt-6">
                             <Button
                                 variant="outline"

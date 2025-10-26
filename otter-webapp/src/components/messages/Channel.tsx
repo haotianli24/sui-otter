@@ -51,7 +51,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         if (isReady && channelId) {
             // Reset scroll state when channel changes
             setIsUserScrolledUp(false);
-            
+
             getChannelById(channelId).then(() => {
                 fetchMessages(channelId);
             });
@@ -80,7 +80,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     // Track scroll position to determine if user is reading older messages
     const handleScroll = () => {
         if (!messagesContainerRef.current) return;
-        
+
         const container = messagesContainerRef.current;
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
         setIsUserScrolledUp(!isAtBottom);
@@ -121,7 +121,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     const handleProfileClick = (address: string, event: React.MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
-        
+
         const rect = event.currentTarget.getBoundingClientRect();
         setProfilePopup({
             isOpen: true,
@@ -259,7 +259,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
             <div className="border-t border-border flex-shrink-0 bg-card">
                 {channelError && (
                     <div className="p-4 border-b border-destructive/20 bg-destructive/10">
-                        <p className="text-sm text-destructive">{channelError}</p>
+                        <p className="text-sm text-destructive/70">{channelError}</p>
                     </div>
                 )}
 
@@ -300,7 +300,7 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
             {/* Avatar for other users */}
             {!isCurrentUser && (
                 <div className="flex flex-col items-center gap-1">
-                    <Avatar 
+                    <Avatar
                         className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={(e) => onProfileClick(message.sender, e)}
                     >
@@ -317,15 +317,10 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
             {/* Message content */}
             <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                 <div
-                    className={`px-4 py-2 rounded-2xl ${isCurrentUser
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card border border-border'
+                    className={`px-4 py-2 rounded-2xl backdrop-blur-md ${isCurrentUser
+                        ? 'bg-card/80 text-card-foreground border border-border/50'
+                        : 'bg-card/80 text-card-foreground border border-border/50'
                         }`}
-                    style={{
-                        backgroundColor: isCurrentUser
-                            ? 'hsl(var(--primary))'
-                            : 'hsl(var(--card))'
-                    }}
                 >
                     <MessageWithMedia
                         content={message.text}
@@ -335,7 +330,7 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
                     />
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-xs ${isCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs text-muted-foreground`}>
                         {formatTimestamp(message.createdAtMs)}
                     </span>
                 </div>

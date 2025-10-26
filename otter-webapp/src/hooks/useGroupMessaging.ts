@@ -232,7 +232,7 @@ export function useSendGroupMessage() {
           // Use the Walrus storage adapter
           console.log('[useSendGroupMessage] Step 1: Uploading to Walrus storage...');
           const uploadResult = await extendedClient.storage.upload([uint8Array], {
-            epochs: 5, // Store for 5 epochs (~150 days)
+            epochs: 10, // Store for 10 epochs (~300 days) - match provider config
           });
 
           console.log('[useSendGroupMessage] Upload result:', uploadResult);

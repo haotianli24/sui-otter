@@ -37,13 +37,13 @@ export function UserProfilePopup({ address, isOpen, onClose, position }: UserPro
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40 bg-black/20" 
+      <div
+        className="fixed inset-0 z-40 bg-black/20"
         onClick={onClose}
       />
-      
+
       {/* Popup */}
-      <div 
+      <div
         className="fixed z-50 w-80"
         style={{
           left: position?.x ? `${position.x}px` : '50%',
@@ -101,7 +101,7 @@ export function UserProfilePopup({ address, isOpen, onClose, position }: UserPro
                 </Button>
               </div>
               {copied && (
-                <p className="text-xs text-green-600">Address copied!</p>
+                <p className="text-xs text-green-500/70">Address copied!</p>
               )}
             </div>
 
@@ -111,7 +111,7 @@ export function UserProfilePopup({ address, isOpen, onClose, position }: UserPro
                 <h4 className="text-sm font-medium text-muted-foreground">Website</h4>
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-muted-foreground" />
-                  <a 
+                  <a
                     href={onChainProfile.website.startsWith('http') ? onChainProfile.website : `https://${onChainProfile.website}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -126,8 +126,8 @@ export function UserProfilePopup({ address, isOpen, onClose, position }: UserPro
 
             {/* Close Button */}
             <div className="pt-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={onClose}
                 className="w-full"
               >

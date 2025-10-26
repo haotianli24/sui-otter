@@ -222,9 +222,30 @@ export function parseFileReference(content: string): {
  * Get file URL from Walrus aggregators
  */
 export async function getFileUrl(blobId: string): Promise<string> {
+    // For mainnet, try direct publisher access first (faster than aggregators)
+    const publishers = [
+        'https://publisher.walrus-mainnet.walrus.space/v1',
+        'https://publisher.mainnet.walrus.mirai.cloud/v1'
+    ];
+
+    // Try publishers first (usually faster on mainnet)
+    for (const baseUrl of publishers) {
+        try {
+            const url = `${baseUrl}/${blobId}`;
+            const response = await fetch(url, { method: 'HEAD' });
+            if (response.ok) {
+                console.log(`[WalrusService] File found on publisher: ${url}`);
+                return url;
+            }
+        } catch (error) {
+            console.warn(`[WalrusService] Failed to check publisher ${baseUrl}:`, error);
+        }
+    }
+
+    // Fallback to aggregators
     const aggregators = [
-        'https://aggregator.walrus-testnet.walrus.space/v1',
-        'https://aggregator.testnet.walrus.mirai.cloud/v1'
+        'https://aggregator.mainnet.walrus.mirai.cloud/v1',
+        'https://aggregator.walrus-mainnet.walrus.space/v1'
     ];
 
     for (const baseUrl of aggregators) {
@@ -232,6 +253,7 @@ export async function getFileUrl(blobId: string): Promise<string> {
             const url = `${baseUrl}/${blobId}`;
             const response = await fetch(url, { method: 'HEAD' });
             if (response.ok) {
+                console.log(`[WalrusService] File found on aggregator: ${url}`);
                 return url;
             }
         } catch (error) {
@@ -239,7 +261,18 @@ export async function getFileUrl(blobId: string): Promise<string> {
         }
     }
 
-    throw new Error('File not found on any aggregator');
+    // As a last resort, try constructing direct URLs (sometimes works even if HEAD fails)
+    const directUrls = [
+        `https://publisher.walrus-mainnet.walrus.space/v1/${blobId}`,
+        `https://publisher.mainnet.walrus.mirai.cloud/v1/${blobId}`,
+        `https://aggregator.mainnet.walrus.mirai.cloud/v1/${blobId}`,
+        `https://aggregator.walrus-mainnet.walrus.space/v1/${blobId}`
+    ];
+
+    console.log('[WalrusService] Trying direct URL construction as fallback...');
+
+    // Return the first URL as a fallback (let the browser handle the 404)
+    return directUrls[0];
 }
 
 /**

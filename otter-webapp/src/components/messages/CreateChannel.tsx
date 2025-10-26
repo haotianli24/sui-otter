@@ -90,15 +90,15 @@ export function CreateChannel() {
                     </div>
 
                     {validationError && (
-                        <p className="text-sm text-destructive">{validationError}</p>
+                        <p className="text-sm text-destructive/70">{validationError}</p>
                     )}
 
                     {channelError && (
-                        <p className="text-sm text-destructive">Error: {channelError}</p>
+                        <p className="text-sm text-destructive/70">Error: {channelError}</p>
                     )}
 
                     {successMessage && (
-                        <p className="text-sm text-green-600 dark:text-green-400">{successMessage}</p>
+                        <p className="text-sm text-foreground">{successMessage}</p>
                     )}
 
                     <Button
