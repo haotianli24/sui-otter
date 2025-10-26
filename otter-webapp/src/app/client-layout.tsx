@@ -2,15 +2,17 @@
 
 import { Open_Sans } from "next/font/google";
 import "./globals.css";
+import "@mysten/dapp-kit/dist/index.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
-import { MessagingProvider } from "@/contexts/messaging-context";
 import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { getFullnodeUrl } from "@mysten/sui/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createNetworkConfig } from "@mysten/dapp-kit";
+import { SessionKeyProvider } from "@/providers/SessionKeyProvider";
+import { MessagingClientProvider } from "@/providers/MessagingClientProvider";
 
 const openSans = Open_Sans({
     subsets: ["latin"],
@@ -42,17 +44,19 @@ export default function ClientLayout({
             <QueryClientProvider client={queryClient}>
                 <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
                     <WalletProvider autoConnect>
-                        <ToastProvider>
-                            <MessagingProvider>
-                                <div className="flex h-screen overflow-hidden">
-                                    <Sidebar />
-                                    <div className="flex-1 flex flex-col overflow-hidden">
-                                        <TopBar />
-                                        <main className="flex-1 overflow-auto">{children}</main>
+                        <SessionKeyProvider>
+                            <MessagingClientProvider>
+                                <ToastProvider>
+                                    <div className="flex h-screen overflow-hidden">
+                                        <Sidebar />
+                                        <div className="flex-1 flex flex-col overflow-hidden">
+                                            <TopBar />
+                                            <main className="flex-1 overflow-auto">{children}</main>
+                                        </div>
                                     </div>
-                                </div>
-                            </MessagingProvider>
-                        </ToastProvider>
+                                </ToastProvider>
+                            </MessagingClientProvider>
+                        </SessionKeyProvider>
                     </WalletProvider>
                 </SuiClientProvider>
             </QueryClientProvider>

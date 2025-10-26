@@ -1,19 +1,19 @@
 "use client";
 
-import { Message } from "@/lib/messaging-service";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useMessaging } from "@/contexts/messaging-context";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { DecryptMessageResult } from "@mysten/messaging";
 
 interface BlockchainMessageBubbleProps {
-  message: Message;
+  message: DecryptMessageResult;
 }
 
 export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProps) {
-  const { currentUser } = useMessaging();
-  const isOwn = message.sender === currentUser;
+  const currentAccount = useCurrentAccount();
+  const isOwn = message.sender === currentAccount?.address;
 
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
+  const formatTime = (timestamp: string) => {
+    return new Date(parseInt(timestamp)).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
@@ -43,7 +43,7 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
           }`}
         >
           <p className="text-sm whitespace-pre-wrap break-words">
-            {message.content}
+            {message.text}
           </p>
         </div>
         <div className="flex items-center gap-2 mt-1">
@@ -51,7 +51,7 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
             {formatAddress(message.sender)}
           </span>
           <span className="text-xs text-muted-foreground">
-            {formatTime(message.timestamp)}
+            {formatTime(message.createdAtMs)}
           </span>
         </div>
       </div>

@@ -5,31 +5,50 @@ import { BlockchainConversationList } from "@/components/messages/blockchain-con
 import { BlockchainMessageBubble } from "@/components/messages/blockchain-message-bubble";
 import { MessageInput } from "@/components/messages/message-input";
 import { EmptyMessages } from "@/components/messages/empty-messages";
+import { SdkStatus } from "@/components/messages/sdk-status";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useMessaging } from "@/contexts/messaging-context";
-import { useWallets } from "@mysten/dapp-kit";
+import { useMessaging } from "@/hooks/messagingHandler";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useSessionKey } from "@/providers/SessionKeyProvider";
 
 export default function MessagesPage() {
-    const { currentWallet } = useWallets();
-    const { channels, messages, currentUser, sendMessage, loadMessages } = useMessaging();
+    const { channels, messages, currentChannel, sendMessage, fetchMessages, getChannelById, isReady } = useMessaging();
+    const currentAccount = useCurrentAccount();
+    const { sessionKey } = useSessionKey();
     const [selectedChannelId, setSelectedChannelId] = useState<string | undefined>();
+    const [showStatus, setShowStatus] = useState(false);
+
+    // Show SDK status if not ready
+    useEffect(() => {
+        if (currentAccount && !isReady) {
+            setShowStatus(true);
+        } else if (isReady && channels.length === 0) {
+            // Keep showing status when ready but no channels
+            setShowStatus(true);
+        } else {
+            // Hide status once they have channels and are ready
+            setShowStatus(false);
+        }
+    }, [currentAccount, isReady, channels.length]);
 
     // Auto-select first channel if available
     useEffect(() => {
         if (channels.length > 0 && !selectedChannelId) {
-            setSelectedChannelId(channels[0].id);
+            const firstChannelId = channels[0].id.id;
+            setSelectedChannelId(firstChannelId);
         }
     }, [channels, selectedChannelId]);
 
     // Load messages when a channel is selected
     useEffect(() => {
         if (selectedChannelId) {
-            loadMessages(selectedChannelId);
+            getChannelById(selectedChannelId);
+            fetchMessages(selectedChannelId);
         }
-    }, [selectedChannelId, loadMessages]);
+    }, [selectedChannelId, fetchMessages, getChannelById]);
 
-    const selectedChannel = channels.find(c => c.id === selectedChannelId);
-    const channelMessages = selectedChannelId ? messages[selectedChannelId] || [] : [];
+    const selectedChannel = channels.find(c => c.id.id === selectedChannelId);
+    const channelMessages = messages || [];
 
     const handleSendMessage = async (content: string) => {
         if (!selectedChannelId) return;
@@ -48,10 +67,19 @@ export default function MessagesPage() {
 
     const getOtherParticipant = (channel: any) => {
         // For now, we'll show the channel ID since we don't have member info
-        return formatAddress(channel.id);
+        return formatAddress(channel.id.id);
     };
 
-    // Using hardcoded wallet, no connection check needed
+    // Show SDK status if user is connected but not ready
+    if (currentAccount && !isReady && showStatus) {
+        return (
+            <div className="flex h-full items-center justify-center bg-background p-6">
+                <div className="max-w-2xl w-full">
+                    <SdkStatus />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-full">
@@ -78,23 +106,34 @@ export default function MessagesPage() {
                                 {getOtherParticipant(selectedChannel)}
                             </h2>
                             <p className="text-xs text-muted-foreground">
-                                Channel ID: {formatAddress(selectedChannel.id)}
+                                Channel ID: {formatAddress(selectedChannel.id.id)}
                             </p>
                         </div>
                     </div>
 
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-6 bg-background">
-                        {channelMessages.map((message) => (
-                            <BlockchainMessageBubble key={message.id} message={message} />
+                        {channelMessages.map((message, index) => (
+                            <BlockchainMessageBubble key={`${message.sender}-${message.createdAtMs}-${index}`} message={message} />
                         ))}
                     </div>
 
                     {/* Message input */}
                     <MessageInput onSend={handleSendMessage} />
                 </div>
-            ) : channels.length === 0 ? (
-                <EmptyMessages />
+            ) : channels.length === 0 && isReady ? (
+                <div className="flex-1 flex items-center justify-center bg-background p-6">
+                    <div className="max-w-2xl w-full space-y-6">
+                        <SdkStatus />
+                        <EmptyMessages />
+                    </div>
+                </div>
+            ) : channels.length === 0 && !isReady ? (
+                <div className="flex-1 flex items-center justify-center bg-background p-6">
+                    <div className="max-w-2xl w-full">
+                        <SdkStatus />
+                    </div>
+                </div>
             ) : (
                 <div className="flex-1 flex items-center justify-center bg-background">
                     <div className="text-center text-muted-foreground">

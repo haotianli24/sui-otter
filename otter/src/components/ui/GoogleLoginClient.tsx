@@ -4,6 +4,22 @@
 import Script from "next/script";
 import { useEffect, useRef } from "react";
 
+declare global {
+  interface Window {
+    google: any;
+  }
+  
+  namespace google {
+    namespace accounts {
+      namespace id {
+        interface CredentialResponse {
+          credential: string;
+        }
+      }
+    }
+  }
+}
+
 export default function GoogleLoginClient() {
   const rendered = useRef(false);
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Channel } from "@/lib/messaging-service";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useMessaging } from "@/contexts/messaging-context";
+import { useMessaging } from "@/hooks/messagingHandler";
+import { DecryptedChannelObject } from "@mysten/messaging";
 
 interface BlockchainConversationListProps {
   selectedId?: string;
@@ -12,29 +12,29 @@ interface BlockchainConversationListProps {
 }
 
 export function BlockchainConversationList({ selectedId, onSelect }: BlockchainConversationListProps) {
-  const { channels, isLoading, error, loadMessages } = useMessaging();
+  const { channels, isFetchingChannels, channelError, fetchMessages } = useMessaging();
   const [loadedChannels, setLoadedChannels] = useState<Set<string>>(new Set());
 
   // Load messages for channels when they're selected
   useEffect(() => {
     if (selectedId && !loadedChannels.has(selectedId)) {
-      loadMessages(selectedId);
+      fetchMessages(selectedId);
       setLoadedChannels(prev => new Set([...prev, selectedId]));
     }
-  }, [selectedId, loadMessages, loadedChannels]);
+  }, [selectedId, fetchMessages, loadedChannels]);
 
   const formatAddress = (address: string) => {
     if (!address) return "Unknown";
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const getOtherParticipant = (channel: Channel, currentUser: string) => {
+  const getOtherParticipant = (channel: DecryptedChannelObject) => {
     // For now, we'll show the channel ID since we don't have member info
     // In a real implementation, you'd get the other participant's address
-    return formatAddress(channel.id);
+    return formatAddress(channel.id.id);
   };
 
-  if (isLoading) {
+  if (isFetchingChannels) {
     return (
       <div className="p-4">
         <div className="space-y-3">
@@ -52,12 +52,12 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
     );
   }
 
-  if (error) {
+  if (channelError) {
     return (
       <div className="p-4">
         <div className="text-center text-destructive">
           <p className="text-sm">Failed to load conversations</p>
-          <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          <p className="text-xs text-muted-foreground mt-1">{channelError}</p>
         </div>
       </div>
     );
@@ -79,30 +79,30 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
       <div className="space-y-1">
         {channels.map((channel) => (
           <div
-            key={channel.id}
-            onClick={() => onSelect(channel.id)}
+            key={channel.id.id}
+            onClick={() => onSelect(channel.id.id)}
             className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
-              selectedId === channel.id ? "bg-muted" : ""
+              selectedId === channel.id.id ? "bg-muted" : ""
             }`}
           >
             <Avatar className="h-10 w-10">
               <AvatarFallback className="bg-primary text-primary-foreground">
-                {getOtherParticipant(channel, "").slice(0, 2).toUpperCase()}
+                {getOtherParticipant(channel).slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium truncate">
-                  {getOtherParticipant(channel, "")}
+                  {getOtherParticipant(channel)}
                 </p>
-                {channel.lastMessage && (
+                {channel.last_message && (
                   <Badge variant="secondary" className="text-xs">
                     New
                   </Badge>
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {channel.lastMessage?.content || "No messages yet"}
+                {channel.last_message?.text || "No messages yet"}
               </p>
             </div>
           </div>

@@ -2,6 +2,7 @@
 import { SuiClient } from "@mysten/sui/client";
 import { SealClient } from "@mysten/seal";
 import { SuiStackMessagingClient } from "@mysten/messaging";
+import { isValidSuiAddress } from "@mysten/sui/utils";
 
 export interface Channel {
   id: string;
@@ -27,6 +28,9 @@ export class MessagingService {
   private messagingClient: any;
 
   constructor(signer: any) {
+    console.log('Initializing MessagingService with signer:', signer);
+    console.log('Signer address:', signer.toSuiAddress());
+    
     // Create base Sui client
     this.client = new SuiClient({
       url: "https://fullnode.testnet.sui.io:443",
@@ -39,6 +43,8 @@ export class MessagingService {
       }
     });
 
+    console.log('Base Sui client created');
+
     // Add Seal encryption layer
     const clientWithSeal = this.client.$extend(
       SealClient.asClientExtension({
@@ -48,6 +54,8 @@ export class MessagingService {
         ]
       })
     );
+
+    console.log('Seal client extension added');
 
     // Add messaging functionality with type assertion
     this.messagingClient = (clientWithSeal as any).$extend(
@@ -66,6 +74,9 @@ export class MessagingService {
         }
       })
     );
+
+    console.log('Messaging client extension added');
+    console.log('MessagingService initialized successfully');
   }
 
   // Get all channels for the current user
@@ -110,35 +121,69 @@ export class MessagingService {
       }
 
       // Basic validation for Sui address format
-      if (formattedAddress.length < 66 || !/^0x[a-fA-F0-9]+$/.test(formattedAddress)) {
-        throw new Error('Invalid Sui address format');
+      if (!isValidSuiAddress(formattedAddress)) {
+        throw new Error(`Invalid Sui address format: ${formattedAddress}`);
       }
 
       console.log('Creating channel with recipient:', formattedAddress);
+      console.log('Creator address:', signer.toSuiAddress());
+      console.log('Initial member addresses:', [formattedAddress]);
 
-      // Try to create the channel with the SDK
-      try {
-        const result = await this.messagingClient.messaging.executeCreateChannelTransaction({
-          signer,
-          initialMembers: [formattedAddress]
-        });
-
-        return {
-          channelId: result.channelId,
-          encryptedKeyBytes: result.encryptedKeyBytes
-        };
-      } catch (sdkError) {
-        console.warn('SDK channel creation failed, using fallback:', sdkError);
-        
-        // Fallback: create a mock channel for development
-        const mockChannelId = `channel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const mockEncryptedKey = new Uint8Array(32); // Mock 32-byte key
-        
-        return {
-          channelId: mockChannelId,
-          encryptedKeyBytes: mockEncryptedKey
-        };
+      // Debug: Check if the addresses are valid
+      const creatorAddress = signer.toSuiAddress();
+      const memberAddresses = [formattedAddress];
+      
+      console.log('Creator address length:', creatorAddress.length);
+      console.log('Member addresses:', memberAddresses);
+      console.log('Member address lengths:', memberAddresses.map(addr => addr.length));
+      
+      // Validate creator address
+      if (!isValidSuiAddress(creatorAddress)) {
+        throw new Error(`Invalid creator address: ${creatorAddress}`);
       }
+      
+      // Validate all member addresses
+      for (const addr of memberAddresses) {
+        if (!isValidSuiAddress(addr)) {
+          throw new Error(`Invalid member address: ${addr}`);
+        }
+      }
+
+      // Use the multi-step flow like the working example
+      const flow = this.messagingClient.messaging.createChannelFlow({
+        creatorAddress: creatorAddress,
+        initialMemberAddresses: memberAddresses,
+      });
+
+      console.log('Flow created successfully');
+
+      // Step 1: Build and execute channel creation
+      console.log('About to call flow.build()...');
+      const channelTx = flow.build();
+      console.log('Channel transaction built successfully');
+      const { digest } = await signer.signAndExecuteTransaction({
+        transaction: channelTx,
+      });
+
+      // Step 2: Get generated caps
+      const { creatorMemberCap } = await flow.getGeneratedCaps({ digest });
+
+      // Step 3: Generate and attach encryption key
+      const attachKeyTx = await flow.generateAndAttachEncryptionKey({
+        creatorMemberCap,
+      });
+
+      const { digest: finalDigest } = await signer.signAndExecuteTransaction({
+        transaction: attachKeyTx,
+      });
+
+      // Get the generated encryption key
+      const { channelId, encryptedKeyBytes } = flow.getGeneratedEncryptionKey();
+
+      return {
+        channelId,
+        encryptedKeyBytes
+      };
     } catch (error) {
       console.error('Error creating channel:', error);
       throw error;
