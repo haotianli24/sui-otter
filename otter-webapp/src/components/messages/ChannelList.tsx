@@ -63,7 +63,7 @@ export function ChannelList() {
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {channels.sort((a, b) => {
                             const aTime = a.last_message ? Number(a.last_message.createdAtMs) : Number(a.created_at_ms);
                             const bTime = b.last_message ? Number(b.last_message.createdAtMs) : Number(b.created_at_ms);
@@ -74,7 +74,7 @@ export function ChannelList() {
                                 onClick={() => {
                                     window.location.hash = channel.id.id;
                                 }}
-                                className="p-4 rounded-lg border bg-card hover:bg-accent cursor-pointer transition-colors"
+                                className="p-4 rounded-xl border border-transparent bg-card hover:bg-accent hover:border-border/50 hover:shadow-sm cursor-pointer transition-all duration-200 ease-in-out hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary/20"
                             >
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-start">

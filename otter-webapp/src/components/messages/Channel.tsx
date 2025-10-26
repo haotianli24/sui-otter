@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useMessaging } from '../../hooks/useMessaging';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { GradientAvatar } from '../ui/gradient-avatar';
 import { ArrowLeft } from 'lucide-react';
 import { MessageInput } from './message-input';
 import { MessageWithMedia } from '@/components/messages/message-with-media';
@@ -44,6 +44,38 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         channelError,
         isReady,
     } = useMessaging();
+
+    // Determine the other member (not the current user)
+    const otherMember = React.useMemo(() => {
+        if (!currentChannel || !currentAccount) return null;
+        
+        // Try to get from member permissions (DecryptedChannelObject structure)
+        if (currentChannel.auth?.member_permissions?.contents) {
+            const member = currentChannel.auth.member_permissions.contents.find((perm: any) => perm.key !== currentAccount.address)?.key;
+            if (member) return member;
+        }
+        
+        // Fallback: try to get from the first message sender who isn't the current user
+        if (messages.length > 0) {
+            const otherSender = messages.find(msg => msg.sender !== currentAccount.address)?.sender;
+            if (otherSender) return otherSender;
+        }
+        
+        return null;
+    }, [currentChannel, currentAccount, messages]);
+
+    // Debug logging for Channel component
+    React.useEffect(() => {
+        if (currentChannel) {
+            console.log('Channel component debug:', {
+                channelId,
+                currentAccount: currentAccount?.address,
+                currentChannel,
+                otherMember,
+                messagesCount: messages.length
+            });
+        }
+    }, [currentChannel, currentAccount, otherMember, messages.length]);
 
     // Fetch channel and messages on mount
     useEffect(() => {
@@ -99,6 +131,14 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         event.preventDefault();
         event.stopPropagation();
 
+        // Debug logging to help identify the issue
+        console.log('Channel handleProfileClick:', {
+            channelId,
+            currentAccount: currentAccount?.address,
+            clickedAddress: address,
+            currentChannel: currentChannel
+        });
+
         const rect = event.currentTarget.getBoundingClientRect();
         setProfilePopup({
             isOpen: true,
@@ -142,18 +182,6 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                             Private conversation
                         </p>
                     </div>
-                    {currentChannel && (
-                        <div className="flex gap-6 text-sm">
-                            <div>
-                                <p className="small-text">Messages</p>
-                                <p className="card-heading">{currentChannel.messages_count}</p>
-                            </div>
-                            <div>
-                                <p className="small-text">Members</p>
-                                <p className="card-heading">{currentChannel.auth.member_permissions.contents.length}</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -270,21 +298,22 @@ interface MessageItemProps {
 function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }: MessageItemProps) {
     const { data: username } = useUsername(message.sender);
     const displayName = username || getDisplayName(message.sender);
-    const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
 
     return (
         <div className={`flex gap-3 ${isCurrentUser ? 'justify-end' : 'justify-start'} relative z-10`}>
             {/* Avatar for other users */}
             {!isCurrentUser && (
                 <div className="flex flex-col items-center gap-1">
-                    <Avatar
+                    <div
                         className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={(e) => onProfileClick(message.sender, e)}
                     >
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {avatarFallback}
-                        </AvatarFallback>
-                    </Avatar>
+                        <GradientAvatar
+                            address={message.sender}
+                            size="sm"
+                            className="h-8 w-8"
+                        />
+                    </div>
                     <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
                         {displayName}
                     </span>

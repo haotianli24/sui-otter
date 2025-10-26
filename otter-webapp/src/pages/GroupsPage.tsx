@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { GroupGallery } from "@/components/groups/group-gallery";
 import { CreateGroup } from "@/components/groups/create-group";
 import { MemberSidebar } from "@/components/groups/member-sidebar";
 import { MessageInput } from "@/components/messages/message-input";
 import { MessageWithMedia } from "@/components/messages/message-with-media";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ClickableAvatar } from "@/components/ui/clickable-avatar";
 import { Button } from "@/components/ui/button";
@@ -21,11 +22,22 @@ type GroupsView = 'gallery' | 'create' | 'chat';
 
 export default function GroupsPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const queryClient = useQueryClient();
     const currentAccount = useCurrentAccount();
     const [currentView, setCurrentView] = useState<GroupsView>('gallery');
     const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
     const [showMembers, setShowMembers] = useState(true);
+
+    // Handle navigation state from discover page
+    useEffect(() => {
+        if (location.state?.selectedGroupId) {
+            setSelectedGroupId(location.state.selectedGroupId);
+            setCurrentView('chat');
+            // Clear the state to prevent re-triggering on re-renders
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate, location.pathname]);
 
     // Get user's groups for the group list
     const { data: userGroups = [] } = useUserGroups();
@@ -367,7 +379,6 @@ interface GroupMessageItemProps {
 function GroupMessageItem({ message, isOwnMessage, groupName }: GroupMessageItemProps) {
     const { data: username } = useUsername(message.sender);
     const displayName = username || getDisplayName(message.sender);
-    const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
 
     const formatTimestamp = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -381,11 +392,11 @@ function GroupMessageItem({ message, isOwnMessage, groupName }: GroupMessageItem
                 {!isOwnMessage && (
                     <div className="flex flex-col items-center gap-1">
                         <ClickableAvatar address={message.sender} className="h-8 w-8 flex-shrink-0 relative z-10">
-                            <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                    {avatarFallback}
-                                </AvatarFallback>
-                            </Avatar>
+                            <GradientAvatar 
+                                address={message.sender}
+                                size="sm"
+                                className="h-8 w-8"
+                            />
                         </ClickableAvatar>
                         <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
                             {displayName}

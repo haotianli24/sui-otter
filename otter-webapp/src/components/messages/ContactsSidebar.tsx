@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useMessaging } from "@/contexts/messaging-context";
 import { cn } from "@/lib/utils";
-import { useUsername } from "@/hooks/useUsernameRegistry";
+import { useUsername, useUserProfile } from "@/hooks/useUsernameRegistry";
 import { getDisplayName } from "@/contexts/UserProfileContext";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 
 export default function ContactsSidebar() {
   const {
@@ -125,7 +126,7 @@ export default function ContactsSidebar() {
             <p className="small-text muted-text">Start a new chat above to get started</p>
           </div>
         ) : (
-          <ul>
+          <ul className="px-2">
             {channels
               .slice()
               .sort((a, b) => {
@@ -133,8 +134,8 @@ export default function ContactsSidebar() {
                 const bTime = b.lastMessage ? Number(b.lastMessage.timestamp) : Number(b.createdAt);
                 return bTime - aTime;
               })
-              .map((ch) => (
-                <li key={ch.id}>
+              .map((ch, index) => (
+                <li key={ch.id} className={index < channels.length - 1 ? "border-b border-border/20" : ""}>
                   <ChannelItem channel={ch} currentAccount={currentAccount} />
                 </li>
               ))}
@@ -167,27 +168,78 @@ interface ChannelItemProps {
 
 function ChannelItem({ channel, currentAccount }: ChannelItemProps) {
   // Get the other member (not the current user)
-  const otherMember = channel.members.find(member => member !== currentAccount?.address);
+  // Prioritize last message sender since members array seems unreliable
+  let otherMember: string | undefined;
+  
+  // First try to get from last message sender (most reliable)
+  if (channel.lastMessage && channel.lastMessage.sender !== currentAccount?.address) {
+    otherMember = channel.lastMessage.sender;
+  }
+  
+  // Fallback to members array if no last message
+  if (!otherMember && channel.members && Array.isArray(channel.members)) {
+    otherMember = channel.members.find(member => member !== currentAccount?.address);
+  }
+  
+  // Debug logging to help identify the issue
+  console.log('ChannelItem debug:', {
+    channelId: channel.id,
+    channelMembers: channel.members,
+    currentAccount: currentAccount?.address,
+    otherMember,
+    lastMessageSender: channel.lastMessage?.sender,
+    usingLastMessageSender: otherMember === channel.lastMessage?.sender
+  });
+  
+  const { data: userProfile } = useUserProfile(otherMember || '');
   const { data: username } = useUsername(otherMember || '');
-  const displayName = username || getDisplayName(otherMember || '');
+  
+  // Use the same logic as ProfilePage: prioritize on-chain profile data
+  const displayName = userProfile?.username || username || getDisplayName(otherMember || '');
 
   return (
     <button
-      className="w-full text-left px-6 py-3 hover:bg-accent/50 transition-colors border-b border-border/50 last:border-b-0"
+      className="w-full text-left px-4 py-4 hover:bg-accent/50 transition-all duration-200 ease-in-out hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg my-1"
       onClick={() => {
         window.location.hash = channel.id;
       }}
     >
-      <div className="font-medium text-foreground truncate">
-        {otherMember ? `Chat with ${displayName}` : 'Group Chat'}
+      <div className="flex items-center gap-3">
+        {otherMember ? (
+          <>
+            <GradientAvatar 
+              address={otherMember}
+              size="sm"
+              className="h-10 w-10"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-foreground truncate transition-colors hover:text-primary">
+                {displayName}
+              </div>
+              {channel.lastMessage ? (
+                <div className="text-sm text-muted-foreground truncate mt-1 transition-colors">
+                  {channel.lastMessage.content.length > 50 ? `${channel.lastMessage.content.slice(0, 50)}…` : channel.lastMessage.content}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground mt-1">No messages yet</div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-foreground truncate transition-colors hover:text-primary">
+              Group Chat
+            </div>
+            {channel.lastMessage ? (
+              <div className="text-sm text-muted-foreground truncate mt-1 transition-colors">
+                {channel.lastMessage.content.length > 50 ? `${channel.lastMessage.content.slice(0, 50)}…` : channel.lastMessage.content}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground mt-1">No messages yet</div>
+            )}
+          </div>
+        )}
       </div>
-      {channel.lastMessage ? (
-        <div className="text-sm text-muted-foreground truncate mt-1">
-          {channel.lastMessage.content.length > 50 ? `${channel.lastMessage.content.slice(0, 50)}…` : channel.lastMessage.content}
-        </div>
-      ) : (
-        <div className="text-sm text-muted-foreground mt-1">No messages yet</div>
-      )}
     </button>
   );
 }

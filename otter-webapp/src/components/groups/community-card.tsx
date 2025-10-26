@@ -1,6 +1,6 @@
 
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { Button } from "@/components/ui/button";
 import { Community } from "@/lib/mock-data";
 import { Users, Lock, Coins, TrendingUp, TrendingDown } from "lucide-react";
@@ -71,12 +71,11 @@ export function CommunityCard({ community, onJoin }: CommunityCardProps) {
       {/* Owner */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Avatar className="h-6 w-6">
-            <AvatarImage src="" alt={community.owner.name} />
-            <AvatarFallback className="bg-muted text-xs">
-              {community.owner.avatar}
-            </AvatarFallback>
-          </Avatar>
+          <GradientAvatar 
+            address={community.owner.address}
+            size="sm"
+            className="h-6 w-6"
+          />
           <span className="text-xs text-muted-foreground">
             by {community.owner.name}
           </span>

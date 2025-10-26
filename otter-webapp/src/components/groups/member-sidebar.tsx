@@ -1,5 +1,5 @@
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { ClickableAvatar } from "@/components/ui/clickable-avatar";
 import { CommunityMember } from "@/hooks/useUserGroups";
 import { Users as UsersIcon } from "lucide-react";
@@ -16,17 +16,15 @@ function MemberItem({ member }: { member: CommunityMember }) {
   
   // Use username if available, otherwise use a better fallback
   const displayName = username || `User ${member.address.slice(0, 8)}`;
-  const fallbackText = username ? username.slice(0, 2).toUpperCase() : member.address.slice(0, 2).toUpperCase();
   
   return (
     <div className="p-3 hover:bg-accent transition-colors flex items-center gap-3">
       <ClickableAvatar address={member.address} className="h-9 w-9">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src="" alt={displayName} />
-          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-            {fallbackText}
-          </AvatarFallback>
-        </Avatar>
+        <GradientAvatar 
+          address={member.address}
+          size="sm"
+          className="h-9 w-9"
+        />
       </ClickableAvatar>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">

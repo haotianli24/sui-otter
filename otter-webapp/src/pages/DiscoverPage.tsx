@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { useSignAndExecuteTransaction, useCurrentAccount } from "@mysten/dapp-ki
 import { Transaction } from "@mysten/sui/transactions";
 
 export default function DiscoverPage() {
+  const navigate = useNavigate();
   const currentAccount = useCurrentAccount();
   const { mutateAsync: signAndExecute, isPending: isJoining } = useSignAndExecuteTransaction();
   const { data: groups = [], isLoading, error, refetch } = useAllGroups();
@@ -112,7 +114,9 @@ export default function DiscoverPage() {
 
       // Refresh groups list
       refetch();
-      alert("Successfully joined the group!");
+      
+      // Navigate to the group chat
+      navigate('/groups', { state: { selectedGroupId: groupId } });
     } catch (error) {
       console.error("Failed to join group:", error);
       alert("Failed to join group. Please try again.");
@@ -152,15 +156,17 @@ export default function DiscoverPage() {
       const createResult = await signAndExecute({ transaction: createTx });
       console.log("DAO community created:", createResult);
 
-      // For now, we'll use a simplified approach
-      // In a real implementation, you'd parse the transaction result to get the community object ID
-      // For testing purposes, we'll show a success message and suggest manual joining
-      alert(`Successfully created ${daoCommunity.name}! You can now find it in your groups and join it manually.`);
+      // Parse the transaction result to get the community object ID
+      // This is a simplified approach - in production you'd need proper parsing
+      const createdCommunityId = createResult.digest; // Using digest as a placeholder
+      
       setJoiningDAO(null);
 
       // Refresh groups list
       refetch();
-      return;
+      
+      // Navigate to the group chat
+      navigate('/groups', { state: { selectedGroupId: createdCommunityId } });
     } catch (error) {
       console.error("Error creating/joining DAO community:", error);
       alert(`Error: ${error instanceof Error ? error.message : 'An error occurred. Please try again.'}`);

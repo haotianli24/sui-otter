@@ -30,6 +30,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
   const getOtherParticipant = (channel: any) => {
     // For now, we'll show the channel ID since we don't have member info
     // In a real implementation, you'd get the other participant's address
+    // For now, return formatted address as fallback
     return formatAddress(channel.id);
   };
 
@@ -75,35 +76,61 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide">
-      <div className="space-y-1 p-2">
-        {channels.map((channel) => (
-          <div
-            key={channel.id}
-            onClick={() => onSelect(channel.id)}
-            className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${selectedId === channel.id ? "bg-muted" : ""
-              }`}
-          >
-            <GradientAvatar 
-              address={channel.id}
-              size="md"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium truncate">
-                  {getOtherParticipant(channel)}
-                </p>
-                {channel.lastMessage && (
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(channel.lastMessage.timestamp))}
-                  </span>
+      <div className="space-y-0 p-3">
+        {channels.map((channel, index) => {
+          const isSelected = selectedId === channel.id;
+          const isLast = index === channels.length - 1;
+          return (
+            <div
+              key={channel.id}
+              onClick={() => onSelect(channel.id)}
+              className={`
+                flex items-center space-x-3 p-4 cursor-pointer transition-all duration-200 ease-in-out
+                border border-transparent hover:border-border/50 hover:shadow-sm hover:bg-muted/30
+                ${!isLast ? "border-b border-border/20" : ""}
+                ${isSelected 
+                  ? "bg-primary/10 border-primary/30 shadow-md ring-1 ring-primary/20 rounded-xl" 
+                  : "hover:scale-[1.02] rounded-xl"
+                }
+              `}
+            >
+              <div className="relative">
+                <GradientAvatar 
+                  address={channel.id}
+                  size="md"
+                  className={`transition-all duration-200 ${isSelected ? "ring-2 ring-primary/30" : ""}`}
+                />
+                {isSelected && (
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-background"></div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">
-                {channel.lastMessage?.content || "No messages yet"}
-              </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <p className={`text-sm font-semibold truncate transition-colors ${
+                    isSelected ? "text-primary" : "text-foreground"
+                  }`}>
+                    {getOtherParticipant(channel)}
+                  </p>
+                  {channel.lastMessage && (
+                    <span className={`text-xs transition-colors ${
+                      isSelected ? "text-primary/70" : "text-muted-foreground"
+                    }`}>
+                      {formatDistanceToNow(new Date(channel.lastMessage.timestamp))}
+                    </span>
+                  )}
+                </div>
+                <p className={`text-xs truncate transition-colors ${
+                  isSelected ? "text-primary/80" : "text-muted-foreground"
+                }`}>
+                  {channel.lastMessage?.content || "No messages yet"}
+                </p>
+              </div>
+              {isSelected && (
+                <div className="w-1 h-8 bg-primary rounded-full"></div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
