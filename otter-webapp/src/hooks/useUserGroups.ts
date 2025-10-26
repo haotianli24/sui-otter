@@ -229,9 +229,8 @@ export function useCommunityMembers(communityId: string) {
 
         const communityFields = communityObject.data.content.fields as any;
         const owner = communityFields.owner as string;
-        const memberCount = parseInt(communityFields.member_count as string);
 
-        // Start with the owner
+        // Start with the owner - they might not have a membership NFT
         const members: CommunityMember[] = [
           {
             id: owner,
@@ -242,14 +241,36 @@ export function useCommunityMembers(communityId: string) {
           }
         ];
 
-        // Query MembershipNFT objects using GraphQL
+        // Try to get members from the CommunityRegistry first
+        try {
+          const registryId = '0x7ece486d159e8b2a8d723552b218ef99a21d3555b199173d2dd49ce2d13b14eb';
+          const registryObject = await suiClient.getObject({
+            id: registryId,
+            options: {
+              showContent: true,
+              showType: true,
+            },
+          });
+
+          if (registryObject.data?.content && 'fields' in registryObject.data.content) {
+            const registryFields = registryObject.data.content.fields as any;
+            const membersTable = registryFields.members;
+            
+            // Try to get members for this community from the registry
+            // Note: This might not work directly as we need to query the table
+          }
+        } catch (error) {
+          // Registry query failed, continue with NFT query
+        }
+
+        // Fallback: Query MembershipNFT objects using GraphQL
         const client = new SuiGraphQLClient({
           url: "https://graphql.testnet.sui.io/graphql"
         });
 
         const query = graphql(`
           query GetMembershipNFTs($type: String!) {
-            objects(filter: { type: $type }, first: 100) {
+            objects(filter: { type: $type }, first: 50) {
               nodes {
                 address
                 asMoveObject {
@@ -269,6 +290,61 @@ export function useCommunityMembers(communityId: string) {
           },
         });
 
+        // If GraphQL fails, try to get members from messages as fallback
+        if (!result.data?.objects?.nodes) {
+          try {
+            // Query messages to extract unique senders
+            const messageQuery = graphql(`
+              query GetGroupMessages($type: String!) {
+                objects(filter: { type: $type }, first: 50) {
+                  nodes {
+                    asMoveObject {
+                      contents {
+                        json
+                      }
+                    }
+                  }
+                }
+              }
+            `);
+
+            const messageResult = await client.query({
+              query: messageQuery,
+              variables: {
+                type: `${COMMUNITY_PACKAGE_ID}::community::GroupMessage`,
+              },
+            });
+
+            if (messageResult.data?.objects?.nodes) {
+              const messageNodes = messageResult.data.objects.nodes as any[];
+              const uniqueSenders = new Set<string>();
+              
+              messageNodes.forEach((node) => {
+                const fields = node.asMoveObject?.contents?.json;
+                if (fields && fields.community_id === communityId) {
+                  uniqueSenders.add(fields.sender);
+                }
+              });
+
+              // Add unique senders as members
+              uniqueSenders.forEach(sender => {
+                const existingMember = members.find(m => m.address === sender);
+                if (!existingMember) {
+                  members.push({
+                    id: sender,
+                    name: sender === owner ? 'Community Owner' : `User ${sender.slice(0, 8)}`,
+                    avatar: sender === owner ? '👑' : '👤',
+                    address: sender,
+                    bio: sender === owner ? 'Community creator' : 'Community member'
+                  });
+                }
+              });
+            }
+          } catch (messageError) {
+            // Failed to get members from messages
+          }
+        }
+
         if (result.data?.objects?.nodes) {
           const membershipNfts = result.data.objects.nodes as any[];
 
@@ -281,32 +357,30 @@ export function useCommunityMembers(communityId: string) {
           // Add actual members from the NFTs
           communityMemberships.forEach((nft: any) => {
             const fields = nft.asMoveObject?.contents?.json;
-            if (fields && fields.member !== owner) { // Don't duplicate the owner
-              members.push({
-                id: fields.member,
-                name: `Member ${members.length}`,
-                avatar: '👤',
-                address: fields.member,
-                bio: 'Community member'
-              });
+            if (fields) {
+              // Check if this member is already in the list (to avoid duplicates)
+              const existingMember = members.find(m => m.address === fields.member);
+              if (!existingMember) {
+                // Only add non-owner members from NFTs
+                if (fields.member !== owner) {
+                  members.push({
+                    id: fields.member,
+                    name: `User ${fields.member.slice(0, 8)}`,
+                    avatar: '👤',
+                    address: fields.member,
+                    bio: 'Community member'
+                  });
+                }
+              }
             }
           });
         }
 
-        // If we still don't have enough members based on member_count, add mock ones
-        while (members.length < memberCount) {
-          members.push({
-            id: `mock-member-${members.length}`,
-            name: `Member ${members.length}`,
-            avatar: '👤',
-            address: `0x${members.length.toString().padStart(64, '0')}`,
-            bio: 'Community member'
-          });
-        }
+        // Don't add mock members - only return real members
+        // The member_count might be inaccurate or include pending members
 
         return members;
       } catch (error) {
-        console.error('Error fetching community members:', error);
         // Return empty array instead of throwing to prevent crashes
         return [];
       }

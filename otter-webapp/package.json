@@ -14,7 +14,7 @@
     "@google/genai": "^1.27.0",
     "@mysten/bcs": "^1.8.0",
     "@mysten/dapp-kit": "0.18.0",
-    "@mysten/messaging": "file:../messaging-sdk-example/mysten-messaging-0.0.1.tgz",
+    "@mysten/messaging": "^0.0.2",
     "@mysten/seal": "^0.6.0",
     "@mysten/sui": "1.38.0",
     "@mysten/walrus": "^0.8.1",

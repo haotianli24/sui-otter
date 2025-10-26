@@ -1,12 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMessaging } from '../../hooks/useMessaging';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 import { ArrowLeft } from 'lucide-react';
 import { MessageInput } from './message-input';
-import { MessageWithMedia } from './message-with-media';
+import { MessageWithMedia } from '@/components/messages/message-with-media';
 import { ZeroBackground } from '../ui/zero-background';
+import { UserProfilePopup } from '../ui/user-profile-popup';
+import { useUsername } from '../../hooks/useUsernameRegistry';
+import { getDisplayName } from '../../contexts/UserProfileContext';
 
 interface ChannelProps {
     channelId: string;
@@ -16,7 +20,18 @@ interface ChannelProps {
 export function Channel({ channelId, onBack }: ChannelProps) {
     const currentAccount = useCurrentAccount();
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isLoadingOlderRef = useRef(false);
+    const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+    const [profilePopup, setProfilePopup] = useState<{
+        isOpen: boolean;
+        address: string;
+        position: { x: number; y: number };
+    }>({
+        isOpen: false,
+        address: '',
+        position: { x: 0, y: 0 }
+    });
     const {
         currentChannel,
         messages,
@@ -34,6 +49,9 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     // Fetch channel and messages on mount
     useEffect(() => {
         if (isReady && channelId) {
+            // Reset scroll state when channel changes
+            setIsUserScrolledUp(false);
+            
             getChannelById(channelId).then(() => {
                 fetchMessages(channelId);
             });
@@ -49,10 +67,33 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         }
     }, [isReady, channelId, getChannelById, fetchMessages]);
 
-    // Reset loading flag after messages update
+    // Auto-scroll to bottom when new messages arrive (only if user is at bottom)
     useEffect(() => {
+        // Don't scroll if we're loading older messages or if user has scrolled up
+        if (!isLoadingOlderRef.current && !isUserScrolledUp) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+        // Reset the flag after messages update
         isLoadingOlderRef.current = false;
-    }, [messages]);
+    }, [messages, isUserScrolledUp]);
+
+    // Track scroll position to determine if user is reading older messages
+    const handleScroll = () => {
+        if (!messagesContainerRef.current) return;
+        
+        const container = messagesContainerRef.current;
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        setIsUserScrolledUp(!isAtBottom);
+    };
+
+    // Add scroll event listener
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll);
+            return () => container.removeEventListener('scroll', handleScroll);
+        }
+    }, []);
 
     const handleSendMessage = async (message: string, mediaFile?: File) => {
         if (!message.trim() && !mediaFile || isSendingMessage) {
@@ -77,10 +118,27 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const formatAddress = (address: string) => {
-        if (!address) return "Unknown";
-        // Show a more user-friendly name instead of wallet address
-        return `User ${address.slice(-4)}`;
+    const handleProfileClick = (address: string, event: React.MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const rect = event.currentTarget.getBoundingClientRect();
+        setProfilePopup({
+            isOpen: true,
+            address,
+            position: {
+                x: rect.left + rect.width / 2 - 160, // Center the popup
+                y: rect.top - 10
+            }
+        });
+    };
+
+    const closeProfilePopup = () => {
+        setProfilePopup({
+            isOpen: false,
+            address: '',
+            position: { x: 0, y: 0 }
+        });
     };
 
     if (!isReady) {
@@ -123,7 +181,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-4 min-h-0 bg-background relative">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 bg-background relative">
                 <ZeroBackground />
                 <div
                     className="relative z-10"
@@ -181,32 +239,13 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                             {messages.map((msg, i) => {
                                 const isCurrentUser = msg.sender === currentAccount?.address;
                                 return (
-                                    <div
+                                    <MessageItem
                                         key={i}
-                                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} relative z-10`}
-                                    >
-                                        <div
-                                            className={`max-w-[70%] rounded-lg p-4 relative z-10 ${isCurrentUser
-                                                ? 'bg-gray-100 text-black shadow-sm'
-                                                : 'bg-card border border-border'
-                                                }`}
-                                        >
-                                            {!isCurrentUser && (
-                                                <p className="small-text mb-2">
-                                                    {formatAddress(msg.sender)}
-                                                </p>
-                                            )}
-                                            <MessageWithMedia
-                                                content={msg.text}
-                                                isOwn={isCurrentUser}
-                                                senderName={formatAddress(msg.sender)}
-                                                groupName="Channel"
-                                            />
-                                            <p className={`small-text mt-2 ${isCurrentUser ? 'opacity-100' : 'muted-text'}`}>
-                                                {formatTimestamp(msg.createdAtMs)}
-                                            </p>
-                                        </div>
-                                    </div>
+                                        message={msg}
+                                        isCurrentUser={isCurrentUser}
+                                        onProfileClick={handleProfileClick}
+                                        formatTimestamp={formatTimestamp}
+                                    />
                                 );
                             })}
                         </div>
@@ -229,6 +268,76 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                         onSend={handleSendMessage}
                         disabled={isSendingMessage}
                     />
+                </div>
+            </div>
+
+            {/* User Profile Popup */}
+            <UserProfilePopup
+                address={profilePopup.address}
+                isOpen={profilePopup.isOpen}
+                onClose={closeProfilePopup}
+                position={profilePopup.position}
+            />
+        </div>
+    );
+}
+
+// Message Item Component
+interface MessageItemProps {
+    message: any;
+    isCurrentUser: boolean;
+    onProfileClick: (address: string, event: React.MouseEvent) => void;
+    formatTimestamp: (ms: string | number | bigint) => string;
+}
+
+function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }: MessageItemProps) {
+    const { data: username } = useUsername(message.sender);
+    const displayName = username || getDisplayName(message.sender);
+    const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
+
+    return (
+        <div className={`flex gap-3 ${isCurrentUser ? 'justify-end' : 'justify-start'} relative z-10`}>
+            {/* Avatar for other users */}
+            {!isCurrentUser && (
+                <div className="flex flex-col items-center gap-1">
+                    <Avatar 
+                        className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => onProfileClick(message.sender, e)}
+                    >
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                            {avatarFallback}
+                        </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
+                        {displayName}
+                    </span>
+                </div>
+            )}
+
+            {/* Message content */}
+            <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                <div
+                    className={`px-4 py-2 rounded-2xl ${isCurrentUser
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card border border-border'
+                        }`}
+                    style={{
+                        backgroundColor: isCurrentUser
+                            ? 'hsl(var(--primary))'
+                            : 'hsl(var(--card))'
+                    }}
+                >
+                    <MessageWithMedia
+                        content={message.text}
+                        isOwn={isCurrentUser}
+                        senderName={displayName}
+                        groupName="Channel"
+                    />
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs ${isCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                        {formatTimestamp(message.createdAtMs)}
+                    </span>
                 </div>
             </div>
         </div>

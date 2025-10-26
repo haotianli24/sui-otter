@@ -6,11 +6,14 @@ import { MemberSidebar } from "@/components/groups/member-sidebar";
 import { MessageInput } from "@/components/messages/message-input";
 import { MessageWithMedia } from "@/components/messages/message-with-media";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ClickableAvatar } from "@/components/ui/clickable-avatar";
 import { Button } from "@/components/ui/button";
 import { ZeroBackground } from "@/components/ui/zero-background";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGroupChat, useSendGroupMessage, useGroupMessages } from "@/hooks/useGroupMessaging";
 import { useUserGroups, useCommunityMembers } from "@/hooks/useUserGroups";
+import { useUsername } from "@/hooks/useUsernameRegistry";
+import { getDisplayName } from "@/contexts/UserProfileContext";
 import { Users as UsersIcon, ArrowLeft, Loader2 } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 
@@ -167,7 +170,7 @@ export default function GroupsPage() {
                 <div className="flex h-full">
                     {/* Left panel - Group list */}
                     <div className="w-80 border-r border-border bg-card">
-                        <div className="p-4 border-b border-border">
+                        <div className="h-18 p-4 border-b border-border flex items-center">
                             <Button
                                 variant="ghost"
                                 onClick={handleBackToGallery}
@@ -209,7 +212,7 @@ export default function GroupsPage() {
                     {/* Middle panel - Active group chat */}
                     <div className="flex-1 flex flex-col">
                         {/* Group header */}
-                        <div className="h-28 px-6 border-b border-border bg-card flex items-center justify-between">
+                        <div className="h-18 px-6 border-b border-border bg-card flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                     <AvatarFallback className="bg-primary text-primary-foreground">
@@ -287,42 +290,18 @@ export default function GroupsPage() {
                                     messages.map((message) => {
                                         const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
                                         return (
-                                            <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'} relative z-10`}>
-                                                <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%] relative z-10`}>
-                                                    {!isOwnMessage && (
-                                                        <Avatar className="h-8 w-8 flex-shrink-0 relative z-10">
-                                                            <AvatarFallback className="bg-primary text-primary-foreground">
-                                                                {message.sender.substring(0, 2).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                    )}
-                                                    <div
-                                                        className={`flex-1 rounded-lg p-3 relative z-10 ${isOwnMessage
-                                                            ? 'bg-gray-100 text-black shadow-sm ml-auto'
-                                                            : 'bg-muted border border-border'
-                                                            }`}
-                                                    >
-                                                        {!isOwnMessage && (
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="small-text font-medium">
-                                                                    {message.sender.substring(0, 8)}...
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        <MessageWithMedia
-                                                            content={message.mediaRef ? `${message.content}\n[${message.mediaRef}]` : message.content}
-                                                            isOwn={isOwnMessage}
-                                                            senderName={message.sender.substring(0, 8) + '...'}
-                                                            groupName={groupChatData?.name || "Group"}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <GroupMessageItem
+                                                key={message.id}
+                                                message={message}
+                                                isOwnMessage={isOwnMessage}
+                                                groupName={groupChatData?.community.name || "Group"}
+                                            />
                                         );
                                     })
                                 )}
                             </div>
                         </div>
+
 
                         {/* Message input */}
                         {groupChatData.membershipNftId && (
@@ -367,6 +346,80 @@ export default function GroupsPage() {
                 onExploreGroups={handleExploreGroups}
                 onSelectGroup={handleSelectGroup}
             />
+        </div>
+    );
+}
+
+// Group Message Item Component
+interface GroupMessageItemProps {
+    message: {
+        id: string;
+        communityId: string;
+        sender: string;
+        content: string;
+        mediaRef: string;
+        timestamp: number;
+    };
+    isOwnMessage: boolean;
+    groupName: string;
+}
+
+function GroupMessageItem({ message, isOwnMessage, groupName }: GroupMessageItemProps) {
+    const { data: username } = useUsername(message.sender);
+    const displayName = username || getDisplayName(message.sender);
+    const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
+
+    const formatTimestamp = (timestamp: number) => {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    return (
+        <div className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'} relative z-10`}>
+            <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%] relative z-10`}>
+                {/* Avatar for other users */}
+                {!isOwnMessage && (
+                    <div className="flex flex-col items-center gap-1">
+                        <ClickableAvatar address={message.sender} className="h-8 w-8 flex-shrink-0 relative z-10">
+                            <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                    {avatarFallback}
+                                </AvatarFallback>
+                            </Avatar>
+                        </ClickableAvatar>
+                        <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
+                            {displayName}
+                        </span>
+                    </div>
+                )}
+
+                {/* Message content */}
+                <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                    <div
+                        className={`px-4 py-2 rounded-2xl ${isOwnMessage
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-card border border-border'
+                            }`}
+                        style={{
+                            backgroundColor: isOwnMessage
+                                ? 'hsl(var(--primary))'
+                                : 'hsl(var(--card))'
+                        }}
+                    >
+                        <MessageWithMedia
+                            content={message.content}
+                            isOwn={isOwnMessage}
+                            senderName={displayName}
+                            groupName={groupName}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                            {formatTimestamp(message.timestamp)}
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
