@@ -1,5 +1,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ClickableAvatar } from "@/components/ui/clickable-avatar";
 import { CommunityMember } from "@/hooks/useUserGroups";
 import { Users as UsersIcon } from "lucide-react";
 import { useUsername } from "@/hooks/useUsernameRegistry";
@@ -19,12 +20,14 @@ function MemberItem({ member }: { member: CommunityMember }) {
   
   return (
     <div className="p-3 hover:bg-accent transition-colors flex items-center gap-3">
-      <Avatar className="h-9 w-9">
-        <AvatarImage src="" alt={displayName} />
-        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-          {fallbackText}
-        </AvatarFallback>
-      </Avatar>
+      <ClickableAvatar address={member.address} className="h-9 w-9">
+        <Avatar className="h-9 w-9">
+          <AvatarImage src="" alt={displayName} />
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+            {fallbackText}
+          </AvatarFallback>
+        </Avatar>
+      </ClickableAvatar>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">
           {isLoadingUsername ? (

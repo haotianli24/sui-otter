@@ -4,14 +4,15 @@ import { GroupGallery } from "@/components/groups/group-gallery";
 import { CreateGroup } from "@/components/groups/create-group";
 import { MemberSidebar } from "@/components/groups/member-sidebar";
 import { MessageInput } from "@/components/messages/message-input";
+import { MessageWithMedia } from "@/components/messages/message-with-media";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ClickableAvatar } from "@/components/ui/clickable-avatar";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGroupChat, useSendGroupMessage, useGroupMessages } from "@/hooks/useGroupMessaging";
 import { useUserGroups, useCommunityMembers } from "@/hooks/useUserGroups";
 import { Users as UsersIcon, ArrowLeft, Loader2 } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
-import { getDisplayName, useUsername } from "@/hooks/useUsernameRegistry";
 
 type GroupsView = 'gallery' | 'create' | 'chat';
 
@@ -79,44 +80,6 @@ export default function GroupsPage() {
         setCurrentView('create');
     };
 
-    // Component to display group message with profile picture and username
-    const GroupMessageWithProfile = ({ message, isOwnMessage }: { message: any, isOwnMessage: boolean }) => {
-        const { data: username } = useUsername(message.sender);
-        const displayName = username || getDisplayName(message.sender);
-        const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
-
-        return (
-            <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
-                <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
-                    {/* Profile picture and username for other users */}
-                    {!isOwnMessage && (
-                        <div className="flex flex-col items-center gap-1">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarFallback className="bg-primary text-primary-foreground">
-                                    {avatarFallback}
-                                </AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
-                                {displayName}
-                            </span>
-                        </div>
-                    )}
-                    <div className={`flex-1 rounded-lg p-3 ${isOwnMessage
-                        ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
-                        : 'bg-muted border border-border'
-                    }`}>
-                        <p className={`text-sm leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : ''}`}>
-                            {message.content}
-                        </p>
-                        <p className={`text-xs mt-1 ${isOwnMessage ? 'opacity-70' : 'text-muted-foreground'}`}>
-                            {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     const handleExploreGroups = () => {
         navigate('/discover');
     };
@@ -143,25 +106,27 @@ export default function GroupsPage() {
     // Render different views based on current state
     if (currentView === 'create') {
         return (
-            <div className="flex h-full">
-                <div className="flex-1 flex items-center justify-center bg-background p-6">
-                    <div className="w-full max-w-2xl">
-                        <div className="mb-6">
-                            <Button
-                                variant="ghost"
-                                onClick={handleBackToGallery}
-                                className="flex items-center gap-2"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Back to Groups
-                            </Button>
+            <div className="page-container">
+                <div className="page-header">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            onClick={handleBackToGallery}
+                            className="flex items-center gap-2"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to Groups
+                        </Button>
+                        <div>
+                            <h1 className="page-heading">Create Group</h1>
+                            <p className="page-subtitle">Start a new community and invite others to join</p>
                         </div>
-                        <CreateGroup
-                            onCreated={handleGroupCreated}
-                            onCancel={handleBackToGallery}
-                        />
                     </div>
                 </div>
+                <CreateGroup
+                    onCreated={handleGroupCreated}
+                    onCancel={handleBackToGallery}
+                />
             </div>
         );
     }
@@ -172,9 +137,9 @@ export default function GroupsPage() {
             return (
                 <div className="flex h-full">
                     <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center space-y-4">
+                        <div className="loading-content">
                             <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                            <p className="text-muted-foreground">Loading group chat...</p>
+                            <p className="muted-text">Loading group chat...</p>
                         </div>
                     </div>
                 </div>
@@ -186,7 +151,7 @@ export default function GroupsPage() {
             return (
                 <div className="flex h-full">
                     <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center space-y-4">
+                        <div className="error-content">
                             <p className="text-destructive">Failed to load group chat</p>
                             <Button onClick={handleBackToGallery}>Back to Groups</Button>
                         </div>
@@ -217,8 +182,8 @@ export default function GroupsPage() {
                                 <div
                                     key={group.id}
                                     className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedGroupId === group.id
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'hover:bg-muted'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'hover:bg-muted'
                                         }`}
                                     onClick={() => setSelectedGroupId(group.id)}
                                 >
@@ -229,8 +194,8 @@ export default function GroupsPage() {
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">{group.name}</p>
-                                            <p className="text-xs opacity-70">
+                                            <p className="card-heading truncate">{group.name}</p>
+                                            <p className="small-text opacity-70">
                                                 {group.currentMembers}/{group.maxMembers} members
                                             </p>
                                         </div>
@@ -251,8 +216,8 @@ export default function GroupsPage() {
                                     </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <h2 className="font-semibold">{groupChatData.community.name}</h2>
-                                    <p className="text-xs text-muted-foreground">
+                                    <h2 className="section-heading">{groupChatData.community.name}</h2>
+                                    <p className="muted-text">
                                         {groupChatData.community.memberCount} members
                                     </p>
                                 </div>
@@ -271,35 +236,61 @@ export default function GroupsPage() {
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-6 bg-background">
                             {isLoadingMessages ? (
-                                <div className="flex items-center justify-center h-full">
-                                    <div className="text-center space-y-4">
+                                <div className="loading-state">
+                                    <div className="loading-content">
                                         <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                                        <p className="text-muted-foreground">Loading messages...</p>
+                                        <p className="muted-text">Loading messages...</p>
                                     </div>
                                 </div>
                             ) : messagesError ? (
-                                <div className="flex items-center justify-center h-full">
-                                    <div className="text-center space-y-4">
+                                <div className="error-state">
+                                    <div className="error-content">
                                         <p className="text-destructive">Failed to load messages</p>
                                         <Button onClick={() => window.location.reload()}>Retry</Button>
                                     </div>
                                 </div>
                             ) : messages.length === 0 ? (
-                                <div className="flex items-center justify-center h-full">
+                                <div className="empty-state">
                                     <div className="text-center text-muted-foreground">
-                                        <p className="text-lg">No messages yet</p>
-                                        <p className="text-sm">Be the first to send a message!</p>
+                                        <p className="section-heading">No messages yet</p>
+                                        <p className="muted-text">Be the first to send a message!</p>
                                     </div>
                                 </div>
                             ) : (
                                 messages.map((message) => {
                                     const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
                                     return (
-                                        <GroupMessageWithProfile 
-                                            key={message.id}
-                                            message={message} 
-                                            isOwnMessage={isOwnMessage} 
-                                        />
+                                        <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
+                                            <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
+                                                {!isOwnMessage && (
+                                                    <ClickableAvatar address={message.sender} className="h-8 w-8 flex-shrink-0">
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarFallback className="bg-primary text-primary-foreground">
+                                                                {message.sender.substring(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    </ClickableAvatar>
+                                                )}
+                                                <div className={`flex-1 rounded-lg p-3 ${isOwnMessage
+                                                    ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
+                                                    : 'bg-muted border border-border'
+                                                    }`}>
+                                                    {!isOwnMessage && (
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="small-text font-medium">
+                                                                {message.sender.substring(0, 8)}...
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <MessageWithMedia
+                                                        content={message.content}
+                                                        isOwn={isOwnMessage}
+                                                        senderName={message.sender.substring(0, 8) + '...'}
+                                                        groupName={groupChatData?.community.name || "Group"}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     );
                                 })
                             )}
@@ -327,8 +318,8 @@ export default function GroupsPage() {
             return (
                 <div className="flex h-full">
                     <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center space-y-4">
-                            <p className="text-muted-foreground">Unable to load group chat</p>
+                        <div className="error-content">
+                            <p className="muted-text">Unable to load group chat</p>
                             <Button onClick={handleBackToGallery}>Back to Groups</Button>
                         </div>
                     </div>
@@ -339,14 +330,16 @@ export default function GroupsPage() {
 
     // Default view - Group Gallery
     return (
-        <div className="flex h-full">
-            <div className="flex-1 p-6 bg-background">
-                <GroupGallery
-                    onCreateGroup={handleCreateGroup}
-                    onExploreGroups={handleExploreGroups}
-                    onSelectGroup={handleSelectGroup}
-                />
+        <div className="page-container">
+            <div className="page-header">
+                <h1 className="page-heading">Groups</h1>
+                <p className="page-subtitle">Manage your groups and connect with others</p>
             </div>
+            <GroupGallery
+                onCreateGroup={handleCreateGroup}
+                onExploreGroups={handleExploreGroups}
+                onSelectGroup={handleSelectGroup}
+            />
         </div>
     );
 }

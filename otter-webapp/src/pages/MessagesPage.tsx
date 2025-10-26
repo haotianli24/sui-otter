@@ -37,16 +37,20 @@ function MessagesPageContent() {
         <div className="flex-1 overflow-hidden min-h-0">
             {currentAccount ? (
                 !isReady ? (
-                    <div className="page-container">
-                        <div className="loading-state">
-                            <div className="loading-content">
-                                <h1 className="page-heading">Messaging Setup</h1>
-                                <p className="page-subtitle">Sign once to start the messaging service</p>
-                                <div className="pt-2">
-                                    <Button onClick={initializeSession} disabled={isInitializing}>
-                                        {isInitializing ? 'Initializing…' : 'Initialize Messaging'}
-                                    </Button>
-                                </div>
+                    <div className="flex items-center justify-center h-full min-h-0">
+                        <div className="text-center space-y-4">
+                            <h1 className="page-heading">Messaging Setup</h1>
+                            <p className="page-subtitle">Connect your wallet to enable secure messaging</p>
+                            <div className="pt-2 flex justify-center">
+                                <Button
+                                    onClick={initializeSession}
+                                    disabled={isInitializing}
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center gap-2"
+                                >
+                                    {isInitializing ? 'Initializing…' : 'Initialize Messaging'}
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -77,14 +81,12 @@ function MessagesPageContent() {
                     </div>
                 )
             ) : (
-                <div className="page-container">
-                    <div className="loading-state">
-                        <div className="loading-content">
-                            <h1 className="page-heading">Welcome to Messages</h1>
-                            <p className="page-subtitle">Please sign in to continue</p>
-                            <div className="pt-2 flex justify-center">
-                                <WalletConnection />
-                            </div>
+                <div className="flex items-center justify-center h-full min-h-0">
+                    <div className="text-center space-y-4">
+                        <h1 className="page-heading">Welcome to Messages</h1>
+                        <p className="page-subtitle">Please sign in to continue</p>
+                        <div className="pt-2">
+                            <WalletConnection />
                         </div>
                     </div>
                 </div>

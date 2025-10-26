@@ -8,6 +8,7 @@ import { MessageInput } from './message-input';
 import { MessageWithMedia } from './message-with-media';
 import { getDisplayName, useUsername } from '../../hooks/useUsernameRegistry';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { ClickableAvatar } from '../ui/clickable-avatar';
 
 interface ChannelProps {
     channelId: string;
@@ -95,11 +96,13 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                 {/* Profile picture and username for other users */}
                 {!isCurrentUser && (
                     <div className="flex flex-col items-center gap-1">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                {avatarFallback}
-                            </AvatarFallback>
-                        </Avatar>
+                        <ClickableAvatar address={msg.sender} className="h-8 w-8 flex-shrink-0">
+                            <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                    {avatarFallback}
+                                </AvatarFallback>
+                            </Avatar>
+                        </ClickableAvatar>
                         <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
                             {displayName}
                         </span>
@@ -143,9 +146,9 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex-1">
-                        <h2 className="text-lg font-semibold">Channel</h2>
+                        <h2 className="text-lg font-semibold">Direct Message</h2>
                         <p className="text-xs text-muted-foreground">
-                            {channelId.slice(0, 16)}...{channelId.slice(-4)}
+                            Private conversation
                         </p>
                     </div>
                     {currentChannel && (
@@ -173,16 +176,19 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                             onClick={handleLoadMore}
                             disabled={isFetchingMessages}
                         >
-                            {isFetchingMessages ? 'Loading...' : 'Load older messages'}
+                            {isFetchingMessages ? 'Loading...' : 'Load previous messages'}
                         </Button>
                     </div>
                 )}
 
                 {isFetchingMessages && messages.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground">Loading messages...</p>
+                    <p className="text-center text-sm text-muted-foreground">Loading conversation...</p>
                 ) : messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                        <p className="text-sm text-muted-foreground">No messages yet. Start the conversation!</p>
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground mb-2">No messages yet</p>
+                            <p className="text-xs text-muted-foreground">Send a message to start the conversation</p>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-3">

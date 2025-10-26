@@ -21,8 +21,8 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center space-y-4">
+      <div className="loading-state">
+        <div className="loading-content">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="muted-text">Loading your groups...</p>
         </div>
@@ -33,32 +33,30 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
 
   if (groups.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center space-y-4">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto" />
-          <div className="space-y-2">
-            <h3 className="card-heading">No Groups Yet</h3>
-            <p className="page-subtitle">You haven't joined any groups yet. Create your own group or explore existing ones.</p>
-          </div>
-          <div className="flex gap-3 justify-center">
-            <Button onClick={onCreateGroup} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create Group
-            </Button>
-            <Button variant="outline" onClick={onExploreGroups} className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              Explore Groups
-            </Button>
-          </div>
+      <div className="empty-state">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto" />
+        <div className="space-y-2">
+          <h3 className="section-heading">No Groups Yet</h3>
+          <p className="page-subtitle">You haven't joined any groups yet. Create your own group or explore existing ones.</p>
+        </div>
+        <div className="flex gap-3 justify-center">
+          <Button onClick={onCreateGroup} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Group
+          </Button>
+          <Button variant="outline" onClick={onExploreGroups} className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Explore Groups
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="section-container">
       <div className="flex items-center justify-between">
-        <h2 className="card-heading">Your Groups ({groups.length})</h2>
+        <h2 className="section-heading">Your Groups ({groups.length})</h2>
         <div className="flex gap-2">
           <Button
             onClick={() => refetch()}
@@ -70,7 +68,7 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
             <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={onCreateGroup} size="sm" className="flex items-center gap-2">
+          <Button variant="outline" onClick={onCreateGroup} size="sm" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Create
           </Button>
@@ -81,7 +79,7 @@ export function GroupGallery({ onCreateGroup, onExploreGroups, onSelectGroup }: 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="card-grid">
         {groups.map((group) => (
           <Card
             key={group.id}

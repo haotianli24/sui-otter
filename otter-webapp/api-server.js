@@ -2,7 +2,7 @@ import http from 'http';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 
 const PORT = 3001;
-const client = new SuiClient({ url: getFullnodeUrl('mainnet') });
+const client = new SuiClient({ url: getFullnodeUrl('testnet') });
 
 // Inline protocol helpers (mirrors src/lib/protocol-registry.ts to avoid TS import at runtime)
 const KNOWN_PROTOCOLS = {

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { AlertCircle, Copy, ExternalLink } from "lucide-react";
+import { AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCachedTransaction, setCachedTransaction } from "@/lib/transaction-cache";
 import { generateTransactionExplanation } from "@/lib/gemini-service";
+import { getTransactionDetails } from "@/lib/api/transaction-explorer";
 
 interface TransactionEmbedProps {
     digest: string;
@@ -22,12 +23,12 @@ interface EmbedState {
     explanation: string | null;
 }
 
-export default function TransactionEmbed({ 
-    digest, 
-    onViewDetails, 
-    senderName, 
-    isCurrentUser, 
-    groupName 
+export default function TransactionEmbed({
+    digest,
+    onViewDetails,
+    senderName,
+    isCurrentUser,
+    groupName
 }: TransactionEmbedProps) {
     const [state, setState] = useState<EmbedState>({
         loading: true,
@@ -58,26 +59,11 @@ export default function TransactionEmbed({
                 return;
             }
 
-            // For now, create mock data since we don't have the API endpoints
-            // TODO: Implement actual transaction fetching
-            const mockTxData = {
-                digest,
-                gasUsed: "0.001234",
-                participants: [senderName || "Unknown"],
-                operations: [
-                    {
-                        type: "transfer",
-                        description: "Token transfer",
-                        from: senderName || "Unknown",
-                        to: "Recipient",
-                        amount: "100",
-                        asset: "SUI"
-                    }
-                ],
-                moveCalls: [],
-                protocolName: "Sui Network",
-                timestamp: new Date().toISOString(),
-            };
+            // Fetch real transaction data
+            const txData = await getTransactionDetails(digest);
+            if (!txData) {
+                throw new Error("Transaction not found");
+            }
 
             // Get AI explanation with context
             const context = {
@@ -86,12 +72,12 @@ export default function TransactionEmbed({
                 groupName: groupName || "the chat"
             };
 
-            const explanation = await generateTransactionExplanation(mockTxData, context);
+            const explanation = await generateTransactionExplanation(txData, context);
 
             // Cache the result
             setCachedTransaction(digest, {
                 explanation,
-                txData: mockTxData,
+                txData,
                 timestamp: Date.now().toString(),
                 digest,
             });
@@ -99,7 +85,7 @@ export default function TransactionEmbed({
             setState({
                 loading: false,
                 error: null,
-                data: mockTxData,
+                data: txData,
                 explanation,
             });
         } catch (error) {
@@ -121,6 +107,13 @@ export default function TransactionEmbed({
         } catch (error) {
             console.error("Failed to copy:", error);
         }
+    };
+
+    const handleRefresh = () => {
+        // Clear cache for this specific digest
+        localStorage.removeItem(`transaction_cache_${digest}`);
+        // Reload data
+        loadTransactionData();
     };
 
     const getStatusColor = () => {
@@ -152,9 +145,12 @@ export default function TransactionEmbed({
                         <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
                             {digest.slice(0, 8)}...{digest.slice(-8)}
                         </code>
-                        <Button size="sm" variant="outline" onClick={handleCopy}>
-                            <Copy className="h-3 w-3" />
-                        </Button>
+                        <button
+                            onClick={handleCopy}
+                            className="text-xs px-3 py-1 border rounded bg-card hover:bg-accent disabled:opacity-50"
+                        >
+                            {copied ? "Copied!" : "Copy Hash"}
+                        </button>
                     </div>
                 </CardContent>
             </Card>
@@ -170,9 +166,19 @@ export default function TransactionEmbed({
                         <CardTitle className="text-sm">Transaction</CardTitle>
                     </div>
                     <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" onClick={handleCopy}>
-                            <Copy className="h-3 w-3" />
-                        </Button>
+                        <button
+                            onClick={handleCopy}
+                            className="text-xs px-3 py-1 border rounded bg-card hover:bg-accent disabled:opacity-50"
+                        >
+                            {copied ? "Copied!" : "Copy Hash"}
+                        </button>
+                        <button
+                            onClick={handleRefresh}
+                            className="text-xs px-3 py-1 border rounded bg-card hover:bg-accent disabled:opacity-50"
+                            disabled={state.loading}
+                        >
+                            {state.loading ? "Loading..." : "Refresh"}
+                        </button>
                         {onViewDetails && (
                             <Button size="sm" variant="ghost" onClick={() => onViewDetails(digest)}>
                                 <ExternalLink className="h-3 w-3" />
@@ -183,19 +189,36 @@ export default function TransactionEmbed({
             </CardHeader>
             <CardContent className="pt-0">
                 <div className="space-y-3">
+                    {/* AI Summary - Show first and prominently */}
+                    {state.explanation && (
+                        <div className="bg-muted/50 p-3 rounded-lg border">
+                            <div className="flex items-start gap-2">
+                                <div className="text-lg">🤖</div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-foreground leading-relaxed">
+                                        {state.explanation}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Transaction Digest */}
                     <div>
-                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono block break-all">
+                        <span className="text-xs text-muted-foreground">Transaction ID:</span>
+                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono block break-all mt-1">
                             {digest}
                         </code>
                     </div>
 
+                    {/* Transaction Details */}
                     {state.data && (
                         <div className="space-y-2">
                             <div className="flex justify-between text-xs">
                                 <span className="text-muted-foreground">Gas Used:</span>
                                 <span className="font-mono">{state.data.gasUsed} SUI</span>
                             </div>
-                            
+
                             {state.data.protocolName && (
                                 <div className="flex justify-between text-xs">
                                     <span className="text-muted-foreground">Protocol:</span>
@@ -208,14 +231,14 @@ export default function TransactionEmbed({
                             {state.data.operations && state.data.operations.length > 0 && (
                                 <div>
                                     <span className="text-xs text-muted-foreground">Operations:</span>
-                                    <div className="mt-1 space-y-1">
+                                    <div className="mt-1 flex flex-wrap gap-2">
                                         {state.data.operations.slice(0, 3).map((op: any, index: number) => (
-                                            <div key={index} className="text-xs">
+                                            <div key={index} className="text-xs flex items-center gap-1">
                                                 <Badge variant="outline" className="text-xs">
                                                     {op.type}
                                                 </Badge>
                                                 {op.description && (
-                                                    <span className="ml-2 text-muted-foreground">
+                                                    <span className="text-muted-foreground">
                                                         {op.description}
                                                     </span>
                                                 )}
@@ -232,19 +255,6 @@ export default function TransactionEmbed({
                         </div>
                     )}
 
-                    {state.explanation && (
-                        <div className="pt-2 border-t">
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                {state.explanation}
-                            </p>
-                        </div>
-                    )}
-
-                    {copied && (
-                        <div className="text-xs text-green-600 text-center">
-                            Copied to clipboard!
-                        </div>
-                    )}
                 </div>
             </CardContent>
         </Card>
