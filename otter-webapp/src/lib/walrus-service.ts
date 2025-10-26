@@ -276,6 +276,26 @@ export async function getFileUrl(blobId: string): Promise<string> {
 }
 
 /**
+ * Store file in localStorage fallback
+ */
+export function storeFallbackFile(blobId: string, file: File, url: string, messageContent?: string): void {
+    const metadata: FileMetadata = {
+        category: getFileCategory(file.type),
+        filename: file.name,
+        size: file.size,
+    };
+
+    const fallbackData = {
+        url,
+        metadata,
+        uploadedAt: Date.now(),
+        messageContent: messageContent || 'Uploaded via messaging app',
+    };
+
+    localStorage.setItem(`walrus_fallback_${blobId}`, JSON.stringify(fallbackData));
+}
+
+/**
  * Get file from localStorage fallback
  */
 export function getFallbackFile(blobId: string): { url: string; metadata: FileMetadata } | null {

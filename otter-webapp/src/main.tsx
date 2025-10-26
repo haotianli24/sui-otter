@@ -23,7 +23,7 @@ const { networkConfig } = createNetworkConfig({
 
 const createClient = () => {
     return new SuiClient({
-        url: "https://fullnode.testnet.sui.io:443",
+        url: "https://fullnode.mainnet.sui.io:443",
         mvr: {
             overrides: {
                 packages: {
@@ -38,7 +38,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <ThemeProvider defaultTheme="system" storageKey="otter-ui-theme">
             <QueryClientProvider client={queryClient}>
-                <SuiClientProvider createClient={createClient} networks={networkConfig} defaultNetwork="testnet">
+                <SuiClientProvider createClient={createClient} networks={networkConfig} defaultNetwork="mainnet">
                     <WalletProvider autoConnect>
                         <UserProfileProvider>
                             <App />

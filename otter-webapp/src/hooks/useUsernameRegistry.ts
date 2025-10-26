@@ -29,7 +29,7 @@ export function useUsername(address: string) {
       try {
         // Query for UserProfile objects owned by the address
         const client = new SuiGraphQLClient({ 
-          url: "https://graphql.testnet.sui.io/graphql" 
+          url: "https://graphql.mainnet.sui.io/graphql" 
         });
 
         const query = graphql(`
@@ -87,7 +87,7 @@ export function useUserProfile(address: string) {
       try {
         // Query for UserProfile objects owned by the address
         const client = new SuiGraphQLClient({ 
-          url: "https://graphql.testnet.sui.io/graphql" 
+          url: "https://graphql.mainnet.sui.io/graphql" 
         });
 
         const query = graphql(`
@@ -198,7 +198,7 @@ export function useCheckUsernameAvailability(username: string) {
       try {
         // Query the registry's shared object to check username availability
         const client = new SuiGraphQLClient({ 
-          url: "https://graphql.testnet.sui.io/graphql" 
+          url: "https://graphql.mainnet.sui.io/graphql" 
         });
 
         // First, check if there are any UserProfile objects with this username

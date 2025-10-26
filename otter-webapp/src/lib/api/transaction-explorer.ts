@@ -1,7 +1,7 @@
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
-// Create a single client instance - using testnet
-const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+// Create a single client instance - using mainnet
+const client = new SuiClient({ url: getFullnodeUrl("mainnet") });
 
 export interface TransactionOperation {
     type: "transfer" | "create" | "mutate" | "delete" | "call" | "publish";
@@ -308,7 +308,7 @@ export async function getTransactionDetails(digest: string): Promise<Transaction
         // Provide more specific error messages
         if (error instanceof Error) {
             if (error.message.includes("not found")) {
-                console.error(`Transaction ${digest} not found on testnet`);
+                console.error(`Transaction ${digest} not found on mainnet`);
             } else if (error.message.includes("network")) {
                 console.error("Network error while fetching transaction");
             } else {

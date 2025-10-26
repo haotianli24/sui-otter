@@ -1,7 +1,7 @@
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
 // Create a single client instance
-const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+const client = new SuiClient({ url: getFullnodeUrl("mainnet") });
 
 export interface ActivityItem {
     digest: string;
