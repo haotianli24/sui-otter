@@ -3,8 +3,6 @@ import { useCurrentAccount, useSuiClient, useSignAndExecuteTransaction } from "@
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/2024.4";
-import { getFileCategory } from '../lib/walrus-service';
-import { useMessagingClient } from '../providers/MessagingClientProvider';
 
 const COMMUNITY_PACKAGE_ID = '0x525a9ee83a400d5a95c79ad0bc9f09a7bc6a0d15eecac2caa999c693b8db50a2';
 
@@ -200,7 +198,6 @@ export function useSendGroupMessage() {
   const currentAccount = useCurrentAccount();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const queryClient = useQueryClient();
-  const extendedClient = useMessagingClient();
 
   return useMutation({
     mutationFn: async ({
@@ -221,70 +218,25 @@ export function useSendGroupMessage() {
       let mediaRef = '';
 
       // Upload file to Walrus if provided
-      if (mediaFile && extendedClient?.storage) {
+      if (mediaFile) {
         try {
-          console.log('[useSendGroupMessage] Starting Walrus upload workflow...');
+          console.log('[useSendGroupMessage] Starting Walrus HTTP API upload...');
 
-          // Convert file to Uint8Array
-          const arrayBuffer = await mediaFile.arrayBuffer();
-          const uint8Array = new Uint8Array(arrayBuffer);
+          // Use HTTP API upload
+          const { uploadFileToWalrusHTTP } = await import('../lib/walrus-service');
+          const uploadResult = await uploadFileToWalrusHTTP(mediaFile, 10);
 
-          // Use the Walrus storage adapter
-          console.log('[useSendGroupMessage] Step 1: Uploading to Walrus storage...');
-          const uploadResult = await extendedClient.storage.upload([uint8Array], {
-            epochs: 10, // Store for 10 epochs (~300 days) - match provider config
-          });
+          console.log('[useSendGroupMessage] Upload successful:', uploadResult);
 
-          console.log('[useSendGroupMessage] Upload result:', uploadResult);
-
-          // Extract blob ID from upload result
-          let mediaBlobId: string | undefined;
-
-          if (typeof uploadResult === 'object' && uploadResult !== null) {
-            // Try different possible property names for blob ID
-            if ('ids' in uploadResult && Array.isArray(uploadResult.ids) && uploadResult.ids.length > 0) {
-              mediaBlobId = uploadResult.ids[0] as string;
-            } else if ('blobId' in uploadResult) {
-              mediaBlobId = uploadResult.blobId as string;
-            } else if ('id' in uploadResult) {
-              mediaBlobId = uploadResult.id as string;
-            } else if ('blob_id' in uploadResult) {
-              mediaBlobId = uploadResult.blob_id as string;
-            }
-          }
-
-          if (mediaBlobId) {
-            console.log('[useSendGroupMessage] Got blob ID from upload:', mediaBlobId);
-
-            // Get file category for proper formatting
-            const category = getFileCategory(mediaFile.type);
-
-            // Format media reference for smart contract: category:blobId (shorter format)
-            mediaRef = `${category}:${mediaBlobId}`;
-          } else {
-            console.error('[useSendGroupMessage] No blob ID found in upload result');
-            throw new Error('Failed to extract blob ID from upload result');
-          }
+          // Format media reference for smart contract: category:blobId
+          mediaRef = `${uploadResult.category}:${uploadResult.blobId}`;
         } catch (uploadError) {
           console.error('[useSendGroupMessage] Failed to upload file to Walrus:', uploadError);
 
           // Fallback: Create a temporary blob ID and store locally
           console.log('[useSendGroupMessage] Creating temporary blob ID as fallback...');
-          const tempBlobId = `temp_${Date.now()}_${mediaFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
-          // Store file data locally as fallback
-          const fileData = {
-            name: mediaFile.name,
-            type: mediaFile.type,
-            size: mediaFile.size,
-            data: Array.from(new Uint8Array(await mediaFile.arrayBuffer())),
-            timestamp: Date.now(),
-          };
-
-          localStorage.setItem(`walrus_temp_${tempBlobId}`, JSON.stringify(fileData));
-          console.log('[useSendGroupMessage] File stored locally with temp ID:', tempBlobId);
-
-          // Get file category for proper formatting
+          const { createFallbackFile, getFileCategory } = await import('../lib/walrus-service');
+          const tempBlobId = await createFallbackFile(mediaFile);
           const category = getFileCategory(mediaFile.type);
 
           // Format media reference for smart contract

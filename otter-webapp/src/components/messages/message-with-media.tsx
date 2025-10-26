@@ -77,12 +77,20 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName, curren
       } catch (error) {
         console.warn('File not immediately available, trying different approaches...');
 
+        // Check if the error indicates the blob doesn't exist (400 errors)
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+          console.log('Blob appears to be invalid or non-existent, not retrying');
+          setMediaError(true);
+          setIsLoadingMedia(false);
+          return;
+        }
+
         // Try multiple approaches with different delays (testnet is slower)
         const approaches = [
           { delay: 2000, name: 'Quick retry' },
           { delay: 5000, name: 'Standard retry' },
-          { delay: 10000, name: 'Extended retry' },
-          { delay: 30000, name: 'Long retry' }
+          { delay: 10000, name: 'Extended retry' }
         ];
 
         let approachIndex = 0;
@@ -111,6 +119,16 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName, curren
               setIsLoadingMedia(false);
             } catch (retryError) {
               console.warn(`${approach.name} failed:`, retryError);
+
+              // Check if this is a 400 error - don't retry further
+              const retryErrorMessage = retryError instanceof Error ? retryError.message : String(retryError);
+              if (retryErrorMessage.includes('400') || retryErrorMessage.includes('Bad Request')) {
+                console.log('Retry failed with 400 error - blob appears invalid, stopping retries');
+                setMediaError(true);
+                setIsLoadingMedia(false);
+                return;
+              }
+
               approachIndex++;
               tryNextApproach();
             }
@@ -189,7 +207,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName, curren
       {mediaError && (
         <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'text-primary-foreground/80' : 'text-destructive/70'}`}>
           <ImageIcon className="h-4 w-4" />
-          <span>Image processing... (testnet delay)</span>
+          <span>File unavailable (may be processing or invalid)</span>
           <Button
             size="sm"
             variant="outline"

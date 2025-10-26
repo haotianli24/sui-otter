@@ -252,6 +252,7 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                                         isCurrentUser={isCurrentUser}
                                         onProfileClick={handleProfileClick}
                                         formatTimestamp={formatTimestamp}
+                                        currentAccount={currentAccount}
                                     />
                                 );
                             })}
@@ -293,9 +294,10 @@ interface MessageItemProps {
     isCurrentUser: boolean;
     onProfileClick: (address: string, event: React.MouseEvent) => void;
     formatTimestamp: (ms: string | number | bigint) => string;
+    currentAccount: any;
 }
 
-function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }: MessageItemProps) {
+function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp, currentAccount }: MessageItemProps) {
     const { data: username } = useUsername(message.sender);
     const displayName = username || getDisplayName(message.sender);
 
@@ -324,8 +326,8 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
             <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                 <div
                     className={`px-4 py-2 rounded-2xl backdrop-blur-md border ${isCurrentUser
-                            ? "bg-primary/10 border-primary/30"
-                            : "bg-card/80 border-border/50"
+                        ? "bg-primary/10 border-primary/30"
+                        : "bg-card/80 border-border/50"
                         }`}
                 >
                     <MessageWithMedia

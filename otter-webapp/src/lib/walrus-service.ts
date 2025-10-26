@@ -1,6 +1,23 @@
 import { WalrusStorageAdapter } from '@mysten/messaging';
 import { Video, FileText, File, Image } from 'lucide-react';
 
+// Walrus HTTP API Configuration - Using official testnet endpoints from docs.wal.app
+const WALRUS_TESTNET_AGGREGATORS = [
+    'https://aggregator.walrus-testnet.walrus.space',
+    'https://aggregator.testnet.walrus.mirai.cloud',
+    'https://aggregator.walrus-testnet.h2o-nodes.com',
+    'https://wal-aggregator-testnet.staketab.org',
+    'https://walrus-testnet-aggregator.nodes.guru'
+];
+
+const WALRUS_TESTNET_PUBLISHERS = [
+    'https://publisher.walrus-testnet.walrus.space',
+    'https://publisher.testnet.walrus.atalma.io',
+    'https://publisher.walrus-testnet.h2o-nodes.com',
+    'https://wal-publisher-testnet.staketab.org',
+    'https://walrus-testnet-publisher.nodes.guru'
+];
+
 export interface FileUploadResult {
     blobId: string;
     filename: string;
@@ -78,7 +95,102 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 }
 
 /**
- * Upload file to Walrus storage
+ * Upload file to Walrus using HTTP API
+ * Based on official docs: https://docs.wal.app/usage/web-api.html
+ */
+export async function uploadFileToWalrusHTTP(
+    file: File,
+    epochs: number = 10
+): Promise<FileUploadResult> {
+    const validation = validateFile(file);
+    if (!validation.valid) {
+        throw new Error(validation.error);
+    }
+
+    console.log('[WalrusService] Starting HTTP API file upload:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        epochs
+    });
+
+    let lastError: Error | null = null;
+
+    // Try each publisher in sequence
+    for (const publisherBaseUrl of WALRUS_TESTNET_PUBLISHERS) {
+        try {
+            // Use deletable=true as per docs (default since v1.33)
+            const url = `${publisherBaseUrl}/v1/blobs?epochs=${epochs}`;
+            console.log(`[WalrusService] Uploading to publisher: ${url}`);
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                body: file,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.warn(`[WalrusService] Publisher ${publisherBaseUrl} returned ${response.status}: ${errorText}`);
+                lastError = new Error(`HTTP ${response.status}: ${errorText}`);
+                continue;
+            }
+
+            const result = await response.json();
+            console.log('[WalrusService] Upload response:', JSON.stringify(result, null, 2));
+
+            // Extract blob ID from response according to Walrus API spec
+            let blobId: string | undefined;
+
+            // Check for newlyCreated response
+            if (result.newlyCreated?.blobObject?.blobId) {
+                blobId = result.newlyCreated.blobObject.blobId;
+                console.log('[WalrusService] Blob newly created with ID:', blobId);
+            }
+            // Check for alreadyCertified response
+            else if (result.alreadyCertified?.blobId) {
+                blobId = result.alreadyCertified.blobId;
+                console.log('[WalrusService] Blob already certified with ID:', blobId);
+            }
+            // Check for direct blobId field (some publishers may use this)
+            else if (result.blobId) {
+                blobId = result.blobId;
+                console.log('[WalrusService] Blob ID from direct field:', blobId);
+            }
+
+            if (!blobId) {
+                console.error('[WalrusService] Could not extract blob ID from response:', result);
+                lastError = new Error('Failed to extract blob ID from upload response');
+                continue;
+            }
+
+            const category = getFileCategory(file.type);
+
+            console.log('[WalrusService] ✅ File uploaded successfully:', {
+                blobId,
+                filename: file.name,
+                category,
+                publisher: publisherBaseUrl
+            });
+
+            return {
+                blobId,
+                filename: file.name,
+                mimeType: file.type,
+                size: file.size,
+                category
+            };
+        } catch (error) {
+            console.warn(`[WalrusService] Failed to upload to publisher ${publisherBaseUrl}:`, error);
+            lastError = error instanceof Error ? error : new Error(String(error));
+        }
+    }
+
+    // If all publishers fail, throw the last error
+    throw new Error(`Failed to upload file "${file.name}" to any Walrus publisher. Last error: ${lastError?.message || 'Unknown error'}`);
+}
+
+/**
+ * Upload file to Walrus storage (SDK method - kept as fallback)
  */
 export async function uploadFileToWalrus(
     file: File,
@@ -91,7 +203,7 @@ export async function uploadFileToWalrus(
     }
 
     try {
-        console.log('[WalrusService] Starting file upload:', {
+        console.log('[WalrusService] Starting SDK file upload:', {
             name: file.name,
             type: file.type,
             size: file.size
@@ -145,6 +257,48 @@ export async function uploadFileToWalrus(
         console.error('[WalrusService] Upload failed:', error);
         throw error;
     }
+}
+
+/**
+ * Get file URL from Walrus aggregators using HTTP API
+ * Based on official docs: https://docs.wal.app/usage/web-api.html
+ */
+export async function getFileUrl(blobId: string): Promise<string> {
+    console.log(`[WalrusService] Fetching blob: ${blobId}`);
+
+    let lastError: Error | null = null;
+
+    // Try each aggregator in sequence
+    for (const aggregatorBaseUrl of WALRUS_TESTNET_AGGREGATORS) {
+        try {
+            const url = `${aggregatorBaseUrl}/v1/blobs/${blobId}`;
+            console.log(`[WalrusService] Trying aggregator: ${url}`);
+
+            const response = await fetch(url, { method: 'HEAD' });
+
+            if (response.ok) {
+                console.log(`[WalrusService] ✅ Blob found at: ${url}`);
+                return url;
+            } else if (response.status === 400) {
+                // 400 means blob doesn't exist or is malformed - no point retrying
+                console.warn(`[WalrusService] Blob not found (400) on ${aggregatorBaseUrl}`);
+                lastError = new Error(`Blob ${blobId} not found (400 Bad Request)`);
+                break; // Don't try other aggregators for 400 errors
+            } else if (response.status === 404) {
+                console.warn(`[WalrusService] Blob not found (404) on ${aggregatorBaseUrl}`);
+                lastError = new Error(`Blob ${blobId} not found (404 Not Found)`);
+                continue; // Try next aggregator
+            } else {
+                console.warn(`[WalrusService] Aggregator returned ${response.status}`);
+                lastError = new Error(`HTTP ${response.status}`);
+            }
+        } catch (error) {
+            console.warn(`[WalrusService] Error checking ${aggregatorBaseUrl}:`, error);
+            lastError = error instanceof Error ? error : new Error(String(error));
+        }
+    }
+
+    throw new Error(`Blob ${blobId} not available on any aggregator. ${lastError?.message || ''}`);
 }
 
 /**
@@ -216,51 +370,6 @@ export function parseFileReference(content: string): {
     }
 
     return null;
-}
-
-/**
- * Get file URL from Walrus aggregators
- */
-export async function getFileUrl(blobId: string): Promise<string> {
-    // Try Walruscan testnet first (the real explorer)
-    try {
-        console.log(`[WalrusService] Fetching file from Walruscan: ${blobId}`);
-
-        // Try Walruscan testnet blob URL
-        const walruscanUrl = `https://walruscan.com/testnet/blob/${blobId}`;
-        const response = await fetch(walruscanUrl, { method: 'HEAD' });
-
-        if (response.ok) {
-            console.log(`[WalrusService] File found on Walruscan: ${walruscanUrl}`);
-            return walruscanUrl;
-        }
-    } catch (error) {
-        console.warn(`[WalrusService] Walruscan failed:`, error);
-    }
-
-    // Fallback to official Walrus testnet aggregators
-    const aggregators = [
-        'https://aggregator.testnet.walrus.mirai.cloud/v1',
-        'https://aggregator.walrus-testnet.walrus.space/v1'
-    ];
-
-    for (const baseUrl of aggregators) {
-        try {
-            const url = `${baseUrl}/${blobId}`;
-            const response = await fetch(url, { method: 'HEAD' });
-            if (response.ok) {
-                console.log(`[WalrusService] File found on aggregator: ${url}`);
-                return url;
-            }
-        } catch (error) {
-            console.warn(`[WalrusService] Failed to check aggregator ${baseUrl}:`, error);
-        }
-    }
-
-    // Last resort: return Walruscan URL (let browser handle it)
-    const fallbackUrl = `https://walruscan.com/testnet/blob/${blobId}`;
-    console.log(`[WalrusService] Using Walruscan fallback: ${fallbackUrl}`);
-    return fallbackUrl;
 }
 
 /**
