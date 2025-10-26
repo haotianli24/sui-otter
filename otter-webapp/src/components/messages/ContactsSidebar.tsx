@@ -41,11 +41,11 @@ export default function ContactsSidebar() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-border flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Contacts</h3>
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <h3 className="card-heading">Contacts</h3>
         <button
           className={cn(
-            "text-xs px-2 py-1 border rounded hover:bg-accent",
+            "small-text px-3 py-1 border rounded hover:bg-accent transition-smooth",
             (!isReady || isLoading) && "opacity-50 cursor-not-allowed"
           )}
           onClick={refreshChannels}
@@ -56,22 +56,22 @@ export default function ContactsSidebar() {
       </div>
 
       {/* New DM inline box */}
-      <div className="p-3 border-b border-border space-y-2">
-        <label htmlFor="new-dm" className="text-xs muted-text">Start a new DM (wallet address)</label>
+      <div className="p-4 border-b border-border space-y-3">
+        <label htmlFor="new-dm" className="small-text">Start a new DM (wallet address)</label>
         <div className="flex gap-2">
           <input
             id="new-dm"
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             placeholder="0x..."
-            className="flex-1 px-2 py-1 text-sm border bg-background disabled:opacity-50"
+            className="form-input flex-1"
             disabled={!isReady || isInitializing}
           />
           <button
             onClick={onCreate}
             disabled={!recipient.trim() || creating || !isReady || isInitializing}
             className={cn(
-              "text-xs px-3 py-1 border rounded bg-card hover:bg-accent",
+              "small-text px-3 py-1 border rounded bg-card hover:bg-accent transition-smooth",
               (!recipient.trim() || creating || !isReady || isInitializing) && "opacity-50 cursor-not-allowed"
             )}
           >
@@ -79,41 +79,43 @@ export default function ContactsSidebar() {
           </button>
         </div>
         {!isReady && (
-          <p className="text-[10px] muted-text">Initialize messaging to start a new DM.</p>
+          <p className="small-text">Initialize messaging to start a new DM.</p>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {!isReady ? (
-          <div className="p-4 text-xs muted-text">
+          <div className="p-6 space-y-4">
             <button
               onClick={initializeSession}
               disabled={isInitializing}
               className={cn(
-                "text-xs px-3 py-1 border rounded bg-card hover:bg-accent",
+                "small-text px-3 py-2 border rounded bg-card hover:bg-accent transition-smooth",
                 isInitializing && "opacity-50 cursor-not-allowed"
               )}
             >
               {isInitializing ? "Initializing…" : "Initialize Messaging"}
             </button>
-            <p className="mt-2">A session is required before loading your contacts.</p>
+            <p className="small-text">A session is required before loading your contacts.</p>
           </div>
         ) : error ? (
-          <div className="p-4 text-xs text-destructive">
-            <p>Error loading conversations: {error}</p>
+          <div className="p-6 space-y-3">
+            <p className="small-text text-destructive">Error loading conversations: {error}</p>
             <button
               onClick={refreshChannels}
-              className="mt-2 text-xs px-2 py-1 border rounded bg-card hover:bg-accent"
+              className="small-text px-3 py-1 border rounded bg-card hover:bg-accent transition-smooth"
             >
               Retry
             </button>
           </div>
         ) : isLoading && channels.length === 0 ? (
-          <p className="p-4 text-xs muted-text">Loading{".".repeat(dotCount)}</p>
+          <div className="p-6">
+            <p className="small-text muted-text">Loading{".".repeat(dotCount)}</p>
+          </div>
         ) : channels.length === 0 ? (
-          <div className="p-4 text-center">
-            <p className="text-xs muted-text mb-2">No conversations yet</p>
-            <p className="text-xs muted-text">Start a new chat above to get started</p>
+          <div className="p-6 text-center space-y-2">
+            <p className="small-text muted-text">No conversations yet</p>
+            <p className="small-text muted-text">Start a new chat above to get started</p>
           </div>
         ) : (
           <ul>
@@ -127,24 +129,24 @@ export default function ContactsSidebar() {
               .map((ch) => (
                 <li key={ch.id}>
                   <button
-                    className="w-full text-left p-3 border-b border-border hover:bg-accent"
+                    className="w-full text-left p-4 border-b border-border hover:bg-accent transition-smooth"
                     onClick={() => {
                       window.location.hash = ch.id;
                     }}
                   >
-                    <div className="text-sm font-medium truncate">Chat with User {ch.id.slice(-4)}</div>
+                    <div className="card-heading truncate">Chat with User {ch.id.slice(-4)}</div>
                     {ch.lastMessage ? (
-                      <div className="text-xs muted-text truncate">
+                      <div className="small-text muted-text truncate mt-1">
                         {ch.lastMessage.content.length > 50 ? `${ch.lastMessage.content.slice(0, 50)}…` : ch.lastMessage.content}
                       </div>
                     ) : (
-                      <div className="text-xs muted-text">No messages yet</div>
+                      <div className="small-text muted-text mt-1">No messages yet</div>
                     )}
                   </button>
                 </li>
               ))}
             {isLoading && channels.length > 0 && (
-              <li className="p-2 text-xs muted-text text-center">
+              <li className="p-4 small-text muted-text text-center">
                 Refreshing...
               </li>
             )}

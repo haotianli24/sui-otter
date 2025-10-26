@@ -6,6 +6,7 @@ import { Card, CardContent } from '../ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { MessageInput } from './message-input';
 import { MessageWithMedia } from './message-with-media';
+import { ZeroBackground } from '../ui/zero-background';
 
 interface ChannelProps {
     channelId: string;
@@ -98,28 +99,28 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     }
 
     return (
-        <div className="flex flex-col h-full bg-card border border-border">
+        <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="border-b border-border flex-shrink-0 p-4">
+            <div className="border-b border-border flex-shrink-0 p-6 bg-card">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={onBack}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex-1">
-                        <h2 className="text-lg font-semibold">Direct Message</h2>
-                        <p className="text-xs text-muted-foreground">
+                        <h2 className="section-heading">Direct Message</h2>
+                        <p className="muted-text">
                             Private conversation
                         </p>
                     </div>
                     {currentChannel && (
-                        <div className="flex gap-4 text-sm">
+                        <div className="flex gap-6 text-sm">
                             <div>
-                                <p className="text-xs text-muted-foreground">Messages</p>
-                                <p className="font-medium">{currentChannel.messages_count}</p>
+                                <p className="small-text">Messages</p>
+                                <p className="card-heading">{currentChannel.messages_count}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Members</p>
-                                <p className="font-medium">{currentChannel.auth.member_permissions.contents.length}</p>
+                                <p className="small-text">Members</p>
+                                <p className="card-heading">{currentChannel.auth.member_permissions.contents.length}</p>
                             </div>
                         </div>
                     )}
@@ -127,80 +128,118 @@ export function Channel({ channelId, onBack }: ChannelProps) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-                {hasMoreMessages && (
-                    <div className="text-center">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleLoadMore}
-                            disabled={isFetchingMessages}
-                        >
-                            {isFetchingMessages ? 'Loading...' : 'Load previous messages'}
-                        </Button>
-                    </div>
-                )}
-
-                {isFetchingMessages && messages.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground">Loading conversation...</p>
-                ) : messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 bg-background relative">
+                <ZeroBackground />
+                <div
+                    className="relative z-5"
+                    onMouseMove={(e) => {
+                        // Forward mouse move events to the ZeroBackground
+                        const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+                        if (zeroBackground) {
+                            zeroBackground.dispatchEvent(new MouseEvent('mousemove', {
+                                clientX: e.clientX,
+                                clientY: e.clientY,
+                                bubbles: true
+                            }));
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        // Forward mouse leave events to the ZeroBackground
+                        const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+                        if (zeroBackground) {
+                            zeroBackground.dispatchEvent(new MouseEvent('mouseleave', {
+                                clientX: e.clientX,
+                                clientY: e.clientY,
+                                bubbles: true
+                            }));
+                        }
+                    }}
+                >
+                    {hasMoreMessages && (
                         <div className="text-center">
-                            <p className="text-sm text-muted-foreground mb-2">No messages yet</p>
-                            <p className="text-xs text-muted-foreground">Send a message to start the conversation</p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleLoadMore}
+                                disabled={isFetchingMessages}
+                            >
+                                {isFetchingMessages ? 'Loading...' : 'Load previous messages'}
+                            </Button>
                         </div>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {messages.map((msg, i) => {
-                            const isCurrentUser = msg.sender === currentAccount?.address;
-                            return (
-                                <div
-                                    key={i}
-                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div
-                                        className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
-                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
-                                            : 'bg-muted border border-border'
-                                            }`}
-                                    >
-                                        {!isCurrentUser && (
-                                            <p className="text-xs text-muted-foreground mb-1">
-                                                {formatAddress(msg.sender)}
-                                            </p>
-                                        )}
-                                        <MessageWithMedia
-                                            content={msg.text}
-                                            isOwn={isCurrentUser}
-                                            senderName={formatAddress(msg.sender)}
-                                            groupName="Channel"
-                                        />
-                                        <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
-                                            {formatTimestamp(msg.createdAtMs)}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+                    )}
 
-                <div ref={messagesEndRef} />
+                    {isFetchingMessages && messages.length === 0 ? (
+                        <div className="loading-state">
+                            <div className="loading-content">
+                                <p className="muted-text">Loading conversation...</p>
+                            </div>
+                        </div>
+                    ) : messages.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="text-center">
+                                <p className="section-heading mb-2">No messages yet</p>
+                                <p className="muted-text">Send a message to start the conversation</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {messages.map((msg, i) => {
+                                const isCurrentUser = msg.sender === currentAccount?.address;
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} relative z-10`}
+                                    >
+                                        <div
+                                            className={`max-w-[70%] rounded-lg p-4 relative z-10 ${isCurrentUser
+                                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                                : 'bg-card border border-border'
+                                                }`}
+                                            style={{
+                                                backgroundColor: isCurrentUser
+                                                    ? 'hsl(var(--primary))'
+                                                    : 'hsl(var(--card))'
+                                            }}
+                                        >
+                                            {!isCurrentUser && (
+                                                <p className="small-text mb-2">
+                                                    {formatAddress(msg.sender)}
+                                                </p>
+                                            )}
+                                            <MessageWithMedia
+                                                content={msg.text}
+                                                isOwn={isCurrentUser}
+                                                senderName={formatAddress(msg.sender)}
+                                                groupName="Channel"
+                                            />
+                                            <p className={`small-text mt-2 ${isCurrentUser ? 'opacity-70' : 'muted-text'}`}>
+                                                {formatTimestamp(msg.createdAtMs)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                </div>
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-border flex-shrink-0">
+            <div className="border-t border-border flex-shrink-0 bg-card">
                 {channelError && (
                     <div className="p-4 border-b border-destructive/20 bg-destructive/10">
                         <p className="text-sm text-destructive">{channelError}</p>
                     </div>
                 )}
 
-                <MessageInput
-                    onSend={handleSendMessage}
-                    disabled={isSendingMessage}
-                />
+                <div className="p-6">
+                    <MessageInput
+                        onSend={handleSendMessage}
+                        disabled={isSendingMessage}
+                    />
+                </div>
             </div>
         </div>
     );

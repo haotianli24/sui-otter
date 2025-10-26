@@ -7,6 +7,7 @@ import { MessageInput } from "@/components/messages/message-input";
 import { MessageWithMedia } from "@/components/messages/message-with-media";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ZeroBackground } from "@/components/ui/zero-background";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGroupChat, useSendGroupMessage, useGroupMessages } from "@/hooks/useGroupMessaging";
 import { useUserGroups, useCommunityMembers } from "@/hooks/useUserGroups";
@@ -233,64 +234,98 @@ export default function GroupsPage() {
                         </div>
 
                         {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-6 bg-background">
-                            {isLoadingMessages ? (
-                                <div className="loading-state">
-                                    <div className="loading-content">
-                                        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-                                        <p className="muted-text">Loading messages...</p>
+                        <div className="flex-1 overflow-y-auto p-6 bg-background relative">
+                            <ZeroBackground />
+                            <div
+                                className="relative z-5"
+                                onMouseMove={(e) => {
+                                    // Forward mouse move events to the ZeroBackground
+                                    const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+                                    if (zeroBackground) {
+                                        zeroBackground.dispatchEvent(new MouseEvent('mousemove', {
+                                            clientX: e.clientX,
+                                            clientY: e.clientY,
+                                            bubbles: true
+                                        }));
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    // Forward mouse leave events to the ZeroBackground
+                                    const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+                                    if (zeroBackground) {
+                                        zeroBackground.dispatchEvent(new MouseEvent('mouseleave', {
+                                            clientX: e.clientX,
+                                            clientY: e.clientY,
+                                            bubbles: true
+                                        }));
+                                    }
+                                }}
+                            >
+                                {isLoadingMessages ? (
+                                    <div className="loading-state">
+                                        <div className="loading-content">
+                                            <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                                            <p className="muted-text">Loading messages...</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ) : messagesError ? (
-                                <div className="error-state">
-                                    <div className="error-content">
-                                        <p className="text-destructive">Failed to load messages</p>
-                                        <Button onClick={() => window.location.reload()}>Retry</Button>
+                                ) : messagesError ? (
+                                    <div className="error-state">
+                                        <div className="error-content">
+                                            <p className="text-destructive">Failed to load messages</p>
+                                            <Button onClick={() => window.location.reload()}>Retry</Button>
+                                        </div>
                                     </div>
-                                </div>
-                            ) : messages.length === 0 ? (
-                                <div className="empty-state">
-                                    <div className="text-center text-muted-foreground">
-                                        <p className="section-heading">No messages yet</p>
-                                        <p className="muted-text">Be the first to send a message!</p>
+                                ) : messages.length === 0 ? (
+                                    <div className="empty-state">
+                                        <div className="text-center text-muted-foreground">
+                                            <p className="section-heading">No messages yet</p>
+                                            <p className="muted-text">Be the first to send a message!</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                messages.map((message) => {
-                                    const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
-                                    return (
-                                        <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
-                                            <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
-                                                {!isOwnMessage && (
-                                                    <Avatar className="h-8 w-8 flex-shrink-0">
-                                                        <AvatarFallback className="bg-primary text-primary-foreground">
-                                                            {message.sender.substring(0, 2).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                )}
-                                                <div className={`flex-1 rounded-lg p-3 ${isOwnMessage
-                                                    ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
-                                                    : 'bg-muted border border-border'
-                                                    }`}>
+                                ) : (
+                                    messages.map((message) => {
+                                        const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
+                                        return (
+                                            <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'} relative z-10`}>
+                                                <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%] relative z-10`}>
                                                     {!isOwnMessage && (
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="small-text font-medium">
-                                                                {message.sender.substring(0, 8)}...
-                                                            </span>
-                                                        </div>
+                                                        <Avatar className="h-8 w-8 flex-shrink-0 relative z-10">
+                                                            <AvatarFallback className="bg-primary text-primary-foreground">
+                                                                {message.sender.substring(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
                                                     )}
-                                                    <MessageWithMedia
-                                                        content={message.content}
-                                                        isOwn={isOwnMessage}
-                                                        senderName={message.sender.substring(0, 8) + '...'}
-                                                        groupName={groupChatData?.name || "Group"}
-                                                    />
+                                                    <div
+                                                        className={`flex-1 rounded-lg p-3 relative z-10 ${isOwnMessage
+                                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto'
+                                                            : 'bg-muted border border-border'
+                                                            }`}
+                                                        style={{
+                                                            backgroundColor: isOwnMessage
+                                                                ? 'hsl(var(--primary))'
+                                                                : 'hsl(var(--muted))'
+                                                        }}
+                                                    >
+                                                        {!isOwnMessage && (
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="small-text font-medium">
+                                                                    {message.sender.substring(0, 8)}...
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <MessageWithMedia
+                                                            content={message.content}
+                                                            isOwn={isOwnMessage}
+                                                            senderName={message.sender.substring(0, 8) + '...'}
+                                                            groupName={groupChatData?.name || "Group"}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })
-                            )}
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
 
                         {/* Message input */}

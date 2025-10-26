@@ -108,9 +108,11 @@ export function loadSessionKey(
     }
 
     // Check if the session is expired based on creation time and TTL
+    // Add a 2-minute buffer to prevent premature expiry
     const creationTime = parsed.data.creationTimeMs;
     const ttlMs = parsed.data.ttlMin * 60 * 1000;
-    const expirationTime = creationTime + ttlMs;
+    const bufferMs = 2 * 60 * 1000; // 2 minutes buffer
+    const expirationTime = creationTime + ttlMs + bufferMs;
 
     if (Date.now() > expirationTime) {
       console.log('Session key expired, clearing cache');
@@ -147,7 +149,8 @@ export function clearAllExpiredSessions(): void {
             const parsed: StoredSessionKey = JSON.parse(value);
             const creationTime = parsed.data.creationTimeMs;
             const ttlMs = parsed.data.ttlMin * 60 * 1000;
-            const expirationTime = creationTime + ttlMs;
+            const bufferMs = 2 * 60 * 1000; // 2 minutes buffer
+            const expirationTime = creationTime + ttlMs + bufferMs;
 
             if (Date.now() > expirationTime) {
               keysToRemove.push(key);
