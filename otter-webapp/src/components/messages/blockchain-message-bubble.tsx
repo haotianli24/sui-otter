@@ -1,7 +1,7 @@
 
 
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useUsername } from "@/hooks/useUsernameRegistry";
 import { UserProfilePopup } from "@/components/ui/user-profile-popup";
@@ -41,7 +41,6 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
   };
 
   const displayName = username || getDisplayName(message.sender);
-  const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(message.sender).slice(0, 2).toUpperCase();
 
   const handleProfileClick = (address: string, event: React.MouseEvent) => {
     event.preventDefault();
@@ -71,14 +70,15 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
       {/* Profile picture and username for other users */}
       {!isOwn && (
         <div className="flex flex-col items-center gap-1">
-          <Avatar
-            className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+          <div
+            className="cursor-pointer hover:opacity-80 transition-opacity"
             onClick={(e) => handleProfileClick(message.sender, e)}
           >
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {avatarFallback}
-            </AvatarFallback>
-          </Avatar>
+            <GradientAvatar 
+              address={message.sender}
+              size="sm"
+            />
+          </div>
           <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
             {displayName}
           </span>

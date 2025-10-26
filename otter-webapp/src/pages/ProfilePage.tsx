@@ -1,7 +1,7 @@
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,13 +12,14 @@ import { useSetUsername, useUserProfile as useOnChainProfile, useCheckUsernameAv
 
 export default function ProfilePage() {
   const currentAccount = useCurrentAccount();
-  const { profile, updateUsername, updateProfile, isLoading } = useUserProfile();
+  const { profile, updateProfile, isLoading } = useUserProfile();
   const onChainProfile = useOnChainProfile(currentAccount?.address || '');
   const setUsernameMutation = useSetUsername();
 
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
+    displayName: '',
     username: '',
     bio: '',
     email: '',
@@ -51,14 +52,11 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getInitials = (address: string) => {
-    return address.slice(0, 2).toUpperCase();
-  };
-
   const startEditing = () => {
     // Use on-chain data if available, otherwise fall back to local profile
     const currentProfile = onChainProfile.data || profile;
     setEditForm({
+      displayName: profile?.displayName || currentProfile?.username || '',
       username: currentProfile?.username || '',
       bio: currentProfile?.bio || '',
       email: profile?.email || '',
@@ -70,6 +68,7 @@ export default function ProfilePage() {
   const cancelEditing = () => {
     setIsEditing(false);
     setEditForm({
+      displayName: '',
       username: '',
       bio: '',
       email: '',
@@ -89,9 +88,11 @@ export default function ProfilePage() {
         website: editForm.website.trim(),
       });
 
-      // Also update local profile for immediate UI updates
-      updateUsername(editForm.username.trim());
+      // Update local profile with all fields independently
+      // displayName and username are separate - one doesn't affect the other
       updateProfile({
+        username: editForm.username.trim(),
+        displayName: editForm.displayName.trim() || undefined,
         bio: editForm.bio.trim() || undefined,
         email: editForm.email.trim() || undefined,
         website: editForm.website.trim() || undefined,
@@ -135,16 +136,14 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src="" alt={currentAccount.address} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                {getInitials(currentAccount.address)}
-              </AvatarFallback>
-            </Avatar>
+            <GradientAvatar 
+              address={currentAccount.address}
+              size="xl"
+            />
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <h2 className="section-heading">
-                  {onChainProfile.data?.username || profile?.displayName || 'User'}
+                  {profile?.displayName || onChainProfile.data?.username || 'User'}
                 </h2>
                 {!isEditing && (
                   <Button
@@ -216,23 +215,38 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    value={editForm.displayName}
+                    onChange={(e) => handleInputChange('displayName', e.target.value)}
+                    placeholder="Enter your display name"
+                    maxLength={50}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your public display name shown to others
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username (Handle) *</Label>
                   <div className="relative">
+                    <div className="absolute left-3 top-3 text-muted-foreground">@</div>
                     <Input
                       id="username"
                       value={editForm.username}
                       onChange={(e) => handleInputChange('username', e.target.value)}
-                      placeholder="Enter your username"
+                      placeholder="username"
                       maxLength={30}
-                      className={editForm.username && !usernameAvailable ? 'border-red-300' : ''}
+                      className={`pl-7 ${editForm.username && !usernameAvailable ? 'border-red-300' : ''}`}
                     />
                     {checkingAvailability && (
                       <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin" />
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1">
                     <p className="text-xs text-muted-foreground">
-                      This will be your display name in all groups and messages
+                      Your unique identifier in all groups and messages
                     </p>
                     {editForm.username && usernameAvailable === false && (
                       <span className="text-xs text-red-400/70">Username not available</span>
@@ -252,6 +266,19 @@ export default function ProfilePage() {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="your@email.com"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Your email for notifications (stored locally)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={editForm.website}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    placeholder="https://yourwebsite.com"
+                  />
                 </div>
               </div>
 
@@ -268,16 +295,6 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground">
                   {editForm.bio.length}/200 characters
                 </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  value={editForm.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  placeholder="https://yourwebsite.com"
-                />
               </div>
             </div>
           )}
