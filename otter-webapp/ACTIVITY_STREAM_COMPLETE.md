@@ -104,7 +104,7 @@ This starts:
 
 - **Frontend**: React + TypeScript + Vite
 - **Backend**: Node.js HTTP server (no Express needed)
-- **Blockchain**: Sui mainnet via `@mysten/sui/client`
+- **Blockchain**: Sui testnet via `@mysten/sui/client`
 - **Wallet**: `@mysten/dapp-kit` for connection
 - **UI**: shadcn/ui components + Tailwind CSS
 

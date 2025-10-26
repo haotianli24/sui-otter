@@ -111,7 +111,10 @@ export default function ContactsSidebar() {
         ) : isLoading && channels.length === 0 ? (
           <p className="p-4 text-xs muted-text">Loading{".".repeat(dotCount)}</p>
         ) : channels.length === 0 ? (
-          <p className="p-4 text-xs muted-text">No conversations yet. Create a new DM to get started.</p>
+          <div className="p-4 text-center">
+            <p className="text-xs muted-text mb-2">No conversations yet</p>
+            <p className="text-xs muted-text">Start a new chat above to get started</p>
+          </div>
         ) : (
           <ul>
             {channels
@@ -129,7 +132,7 @@ export default function ContactsSidebar() {
                       window.location.hash = ch.id;
                     }}
                   >
-                    <div className="text-sm font-medium truncate">{ch.id.slice(0, 16)}…{ch.id.slice(-4)}</div>
+                    <div className="text-sm font-medium truncate">Chat with User {ch.id.slice(-4)}</div>
                     {ch.lastMessage ? (
                       <div className="text-xs muted-text truncate">
                         {ch.lastMessage.content.length > 50 ? `${ch.lastMessage.content.slice(0, 50)}…` : ch.lastMessage.content}

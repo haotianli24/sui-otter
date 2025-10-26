@@ -32,10 +32,12 @@ Just sent some SUI! Transaction: 2k5J8abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 - Messages containing transaction digests should show a small toggle button below the message
 - The toggle button shows "Hide Transaction" by default (embed is visible)
 - Clicking the toggle button shows/hides the transaction embed
-- The embed displays transaction details, gas usage, and AI explanation
+- **The embed shows the AI summary FIRST and most prominently** (🤖 icon with highlighted box)
+- Below the AI summary, it shows transaction details, gas usage, and technical information
 - Copy button should work to copy the digest
 - Loading states should be shown while fetching transaction data
 - Toggle button only appears on messages with transaction digests
+- AI explanations are generated using real transaction data from Sui blockchain
 
 ## Troubleshooting
 

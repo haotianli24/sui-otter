@@ -83,7 +83,8 @@ export function Channel({ channelId, onBack }: ChannelProps) {
 
     const formatAddress = (address: string) => {
         if (!address) return "Unknown";
-        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        // Show a more user-friendly name instead of wallet address
+        return `User ${address.slice(-4)}`;
     };
 
     if (!isReady) {
@@ -105,9 +106,9 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex-1">
-                        <h2 className="text-lg font-semibold">Channel</h2>
+                        <h2 className="text-lg font-semibold">Direct Message</h2>
                         <p className="text-xs text-muted-foreground">
-                            {channelId.slice(0, 16)}...{channelId.slice(-4)}
+                            Private conversation
                         </p>
                     </div>
                     {currentChannel && (
@@ -135,16 +136,19 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                             onClick={handleLoadMore}
                             disabled={isFetchingMessages}
                         >
-                            {isFetchingMessages ? 'Loading...' : 'Load older messages'}
+                            {isFetchingMessages ? 'Loading...' : 'Load previous messages'}
                         </Button>
                     </div>
                 )}
 
                 {isFetchingMessages && messages.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground">Loading messages...</p>
+                    <p className="text-center text-sm text-muted-foreground">Loading conversation...</p>
                 ) : messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                        <p className="text-sm text-muted-foreground">No messages yet. Start the conversation!</p>
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground mb-2">No messages yet</p>
+                            <p className="text-xs text-muted-foreground">Send a message to start the conversation</p>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-3">

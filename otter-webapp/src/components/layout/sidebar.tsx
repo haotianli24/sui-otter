@@ -14,6 +14,7 @@ import {
     X,
     Waves,
 } from "lucide-react";
+import SuiLogo from "/sui-sui-logo.svg";
 
 const navItems = [
     {
@@ -117,11 +118,13 @@ export function Sidebar() {
 
                 {/* Footer */}
                 <div className="p-6 border-t border-border">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                            <span className="text-xs font-bold text-primary-foreground">S</span>
-                        </div>
-                        <span className="text-sm">Powered by Sui</span>
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <span className="text-sm">Powered by</span>
+                        <img
+                            src={SuiLogo}
+                            alt="Sui Logo"
+                            className="w-6 h-6"
+                        />
                     </div>
                 </div>
             </div>

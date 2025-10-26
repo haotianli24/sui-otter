@@ -8,7 +8,7 @@ export function EmptyMessages() {
   const [showRecipientBox, setShowRecipientBox] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const { createChannel, isReady, initializeSession, isInitializing } = useMessaging();
+  const { createChannel, isReady, initializeSession, isInitializing, channels } = useMessaging();
 
   const handleCreateChannel = async () => {
     if (!recipientAddress.trim()) return;
@@ -26,49 +26,66 @@ export function EmptyMessages() {
     }
   };
 
+  const hasChannels = channels && channels.length > 0;
+
   return (
-    <div className="flex-1 flex items-center justify-center bg-background">
-      <div className="text-center text-muted-foreground max-w-md space-y-4">
-        <MessageSquare className="h-16 w-16 mx-auto opacity-50" />
-        <h3 className="card-heading">No messages yet</h3>
-        {isReady ? (
-          <>
-            <p className="body-text">
-              Start a conversation by creating a new message channel with another user.
-            </p>
-            <div className="flex flex-col items-center gap-4">
-              <Button
-                variant="outline"
-                className="h-16 w-16 rounded-full p-0 flex items-center justify-center"
-                onClick={() => setShowRecipientBox((s) => !s)}
-                title="Start a new DM"
-              >
-                <Plus className="h-8 w-8" />
-              </Button>
-              {showRecipientBox && (
-                <div className="w-full border rounded-lg p-4 text-left bg-card">
-                  <label htmlFor="recipient" className="text-sm font-medium">
-                    Recipient Wallet Address
-                  </label>
-                  <Input
-                    id="recipient"
-                    placeholder="0x..."
-                    value={recipientAddress}
-                    onChange={(e) => setRecipientAddress(e.target.value)}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Enter the Sui wallet address of the recipient to start a direct message.
-                  </p>
-                  <div className="flex gap-2 justify-end mt-3">
+    <div className="flex-1 flex items-center justify-center bg-background p-6">
+      <div className="text-center max-w-lg space-y-6">
+        <div className="space-y-3">
+          <MessageSquare className="h-20 w-20 mx-auto text-muted-foreground/40" />
+          <h3 className="text-xl font-semibold text-foreground">
+            {hasChannels ? "No messages selected" : "No messages yet"}
+          </h3>
+          <p className="text-muted-foreground">
+            {hasChannels
+              ? "Select a conversation from the sidebar to start chatting."
+              : "Start a conversation by creating a new message channel with another user."
+            }
+          </p>
+        </div>
+
+        {isReady && (
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => setShowRecipientBox((s) => !s)}
+            >
+              <Plus className="h-4 w-4" />
+              Start New Conversation
+            </Button>
+
+            {showRecipientBox && (
+              <div className="w-full border rounded-lg p-6 text-left bg-card shadow-sm">
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="recipient" className="text-sm font-medium text-foreground">
+                      Recipient Wallet Address
+                    </label>
+                    <Input
+                      id="recipient"
+                      placeholder="0x..."
+                      value={recipientAddress}
+                      onChange={(e) => setRecipientAddress(e.target.value)}
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Enter the Sui wallet address of the recipient to start a direct message.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => setShowRecipientBox(false)}
                       disabled={isCreating}
                     >
                       Cancel
                     </Button>
                     <Button
+                      size="sm"
                       onClick={handleCreateChannel}
                       disabled={!recipientAddress.trim() || isCreating}
                     >
@@ -76,13 +93,20 @@ export function EmptyMessages() {
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          </>
-        ) : (
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isReady && (
           <div className="space-y-3">
-            <p className="body-text">Initialize messaging to start chatting.</p>
-            <Button onClick={initializeSession} disabled={isInitializing}>
+            <p className="text-muted-foreground">Initialize messaging to start chatting.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={initializeSession}
+              disabled={isInitializing}
+            >
               {isInitializing ? "Initializing…" : "Initialize Messaging"}
             </Button>
           </div>

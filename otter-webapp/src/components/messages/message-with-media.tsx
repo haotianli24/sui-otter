@@ -134,6 +134,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
   // Detect transaction hash in the text content
   const transactionHash = detectTransactionHash(textContent);
 
+
   return (
     <>
       {imageUrl && (

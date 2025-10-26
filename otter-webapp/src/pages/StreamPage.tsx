@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, RefreshCw, Activity, AlertCircle, ExternalLink } from "lucide-react";
+import { Search, RefreshCw, Activity, AlertCircle, ExternalLink, ArrowDown, ArrowUp, RefreshCcw, Image, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,16 +52,41 @@ export default function StreamPage() {
         return acc;
     }, [] as typeof activities);
 
-    const filteredActivities = uniqueActivities.filter(activity => {
+    // Filter by time range first
+    const timeFilteredActivities = uniqueActivities.filter(activity => {
+        if (timeRange === 'all') return true;
+
+        const activityTime = new Date(parseInt(activity.timestamp));
+        const now = new Date();
+        const timeDiff = now.getTime() - activityTime.getTime();
+
+        switch (timeRange) {
+            case 'hour':
+                return timeDiff <= 60 * 60 * 1000; // 1 hour in milliseconds
+            case 'day':
+                return timeDiff <= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+            case 'week':
+                return timeDiff <= 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+            default:
+                return true;
+        }
+    });
+
+    // Then filter by activity type
+    const filteredActivities = timeFilteredActivities.filter(activity => {
         switch (filter) {
             case 'transfers':
                 return activity.type === 'incoming' || activity.type === 'outgoing';
             case 'swaps':
-                // This would need to be enhanced with protocol detection
-                return activity.operationsCount > 1;
+                // Look for swap-like patterns: multiple operations with different types
+                // or operations that suggest token exchanges
+                return activity.operationsCount > 1 && (
+                    activity.operationsCount >= 2 || // Multiple operations often indicate swaps
+                    activity.gasUsed > '1000000' // Higher gas usage often indicates complex operations like swaps
+                );
             case 'nfts':
-                // This would need to be enhanced with NFT detection
-                return activity.operationsCount === 1;
+                // Look for NFT-like patterns: single operations with specific characteristics
+                return activity.operationsCount === 1 && activity.gasUsed < '500000';
             case 'calls':
                 return activity.operationsCount > 0;
             default:
@@ -152,27 +177,27 @@ export default function StreamPage() {
                         <select
                             value={filter}
                             onChange={(e) => setFilter(e.target.value as any)}
-                            className="px-3 py-1 border border-border rounded-md bg-background text-sm flex items-center gap-2"
+                            className="h-9 pl-5 pr-6 py-1 border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none bg-no-repeat bg-right bg-[length:14px] bg-[position:right_8px_center] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMuNSA1TDUuNSA3TDcuNSA1IiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K')]"
                         >
-                            <option value="all">🔍 All Activity</option>
-                            <option value="transfers">💸 Transfers</option>
-                            <option value="swaps">🔄 Swaps</option>
-                            <option value="nfts">🎨 NFTs</option>
-                            <option value="calls">⚡ Smart Contracts</option>
+                            <option value="all">All Activity</option>
+                            <option value="transfers">Transfers</option>
+                            <option value="swaps">Swaps</option>
+                            <option value="nfts">NFTs</option>
+                            <option value="calls">Smart Contracts</option>
                         </select>
                     </div>
 
-                    {/* Time Range */}
+                    {/* Time Range Dropdown */}
                     <div className="flex items-center gap-2">
                         <select
                             value={timeRange}
                             onChange={(e) => setTimeRange(e.target.value as any)}
-                            className="px-3 py-1 border border-border rounded-md bg-background text-sm flex items-center gap-2"
+                            className="h-9 pl-5 pr-6 py-1 border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none bg-no-repeat bg-right bg-[length:14px] bg-[position:right_8px_center] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTMuNSA1TDUuNSA3TDcuNSA1IiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K')]"
                         >
-                            <option value="all">🕐 All Time</option>
-                            <option value="hour">⏰ Last Hour</option>
-                            <option value="day">📅 Last 24h</option>
-                            <option value="week">📆 Last 7 days</option>
+                            <option value="all">All Time</option>
+                            <option value="hour">Last Hour</option>
+                            <option value="day">Last 24h</option>
+                            <option value="week">Last 7 days</option>
                         </select>
                     </div>
                 </div>
@@ -199,6 +224,7 @@ export default function StreamPage() {
                     <div className="muted-text">
                         Showing {filteredActivities.length} of {activities.length} activities
                         {filter !== 'all' && ` (filtered by ${filter})`}
+                        {timeRange !== 'all' && ` (${timeRange} time range)`}
                     </div>
                 )}
             </div>
