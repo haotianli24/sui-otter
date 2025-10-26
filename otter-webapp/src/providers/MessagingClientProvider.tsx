@@ -11,9 +11,14 @@ const SEAL_SERVERS = [
   '0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8',
 ];
 
-const MessagingClientContext = createContext<SuiStackMessagingClient | null>(null);
+interface ExtendedClient {
+  messaging: SuiStackMessagingClient;
+  storage: WalrusStorageAdapter;
+}
 
-export const useMessagingClient = (): SuiStackMessagingClient | null => {
+const MessagingClientContext = createContext<ExtendedClient | null>(null);
+
+export const useMessagingClient = (): ExtendedClient | null => {
   const ctx = useContext(MessagingClientContext);
   if (ctx === undefined) {
     throw new Error('useMessagingClient must be used within a MessagingClientProvider');
@@ -33,13 +38,13 @@ export const MessagingClientProvider = ({
     if (!sessionKey) return null;
 
     try {
-      // Create the extended client with SealClient and MessagingClient
+      // Create the extended client with SealClient
       const extendedClient = new SuiClient({
         url: "https://fullnode.testnet.sui.io:443",
         mvr: {
           overrides: {
             packages: {
-              '@local-pkg/sui-stack-messaging': "0x984960ebddd75c15c6d38355ac462621db0ffc7d6647214c802cd3b685e1af3d", // Or provide your own package ID
+              '@local-pkg/sui-stack-messaging': "0x984960ebddd75c15c6d38355ac462621db0ffc7d6647214c802cd3b685e1af3d",
             },
           },
         },
@@ -51,20 +56,27 @@ export const MessagingClientProvider = ({
               weight: 1,
             })),
           })
-        )
-        .$extend(
-          SuiStackMessagingClient.experimental_asClientExtension({
-            storage: (client) =>
-              new WalrusStorageAdapter(client, {
-                publisher: 'https://publisher.walrus-testnet.walrus.space',
-                aggregator: 'https://aggregator.testnet.walrus.mirai.cloud',
-                epochs: 10,
-              }),
-            sessionKey,
-          })
         );
 
-      return extendedClient.messaging;
+      // Create storage adapter
+      const storage = new WalrusStorageAdapter(extendedClient, {
+        publisher: 'https://publisher.walrus-testnet.walrus.space',
+        aggregator: 'https://aggregator.testnet.walrus.mirai.cloud',
+        epochs: 10,
+      });
+
+      // Create messaging client with storage
+      const messaging = extendedClient.$extend(
+        SuiStackMessagingClient.experimental_asClientExtension({
+          storage: () => storage,
+          sessionKey,
+        })
+      ).messaging;
+
+      return {
+        messaging,
+        storage,
+      };
     } catch (error) {
       console.error('Failed to create messaging client:', error);
       return null;

@@ -6,7 +6,8 @@ import { Transaction } from '@mysten/sui/transactions';
 import { DecryptedChannelObject, DecryptMessageResult, ChannelMessagesDecryptedRequest } from '@mysten/messaging';
 
 export const useMessaging = () => {
-  const messagingClient = useMessagingClient();
+  const extendedClient = useMessagingClient();
+  const messagingClient = extendedClient?.messaging;
   const { sessionKey, isInitializing, error } = useSessionKey();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const currentAccount = useCurrentAccount();
@@ -226,7 +227,7 @@ export const useMessaging = () => {
   }, [currentChannel, getChannelById]);
 
   // Send message function
-  const sendMessage = useCallback(async (channelId: string, message: string) => {
+  const sendMessage = useCallback(async (channelId: string, message: string, mediaFile?: File) => {
     if (!messagingClient || !currentAccount) {
       setChannelError('[sendMessage] Messaging client or account not available');
       return null;
@@ -248,13 +249,84 @@ export const useMessaging = () => {
         throw new Error('No encrypted key found for channel');
       }
 
+      let finalMessage = message;
+      
+      // Upload image to Walrus if provided
+      if (mediaFile && extendedClient?.storage) {
+        try {
+          console.log('[sendMessage] Starting Walrus upload workflow...');
+          
+          // Convert file to Uint8Array
+          const arrayBuffer = await mediaFile.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Use the Walrus storage adapter
+          console.log('[sendMessage] Step 1: Uploading to Walrus storage...');
+          const uploadResult = await extendedClient.storage.upload([uint8Array], {
+            epochs: 3, // Store for 3 epochs (~90 days)
+          });
+          
+          console.log('[sendMessage] Upload result:', uploadResult);
+          console.log('[sendMessage] Upload result structure:', typeof uploadResult, Object.keys(uploadResult || {}));
+          
+          // Extract blob ID from upload result
+          let mediaBlobId: string | undefined;
+          
+          if (typeof uploadResult === 'object' && uploadResult !== null) {
+            // Try different possible property names for blob ID
+            if ('ids' in uploadResult && Array.isArray(uploadResult.ids) && uploadResult.ids.length > 0) {
+              mediaBlobId = uploadResult.ids[0] as string;
+            } else if ('blobId' in uploadResult) {
+              mediaBlobId = uploadResult.blobId as string;
+            } else if ('id' in uploadResult) {
+              mediaBlobId = uploadResult.id as string;
+            } else if ('blob_id' in uploadResult) {
+              mediaBlobId = uploadResult.blob_id as string;
+            }
+          }
+          
+          if (mediaBlobId) {
+            console.log('[sendMessage] Got blob ID from upload:', mediaBlobId);
+            console.log('[sendMessage] Blob uploaded successfully, ID:', mediaBlobId);
+            console.log('[sendMessage] Note: Blob may take a few moments to become accessible via aggregator');
+            
+            // Append Walrus reference to message
+            finalMessage = `${message}\n[IMAGE:${mediaBlobId}]`;
+          } else {
+            console.error('[sendMessage] No blob ID found in upload result');
+            throw new Error('Failed to extract blob ID from upload result');
+          }
+        } catch (uploadError) {
+          console.error('[sendMessage] Failed to upload image to Walrus:', uploadError);
+          
+          // Fallback: Create a temporary blob ID and store locally
+          console.log('[sendMessage] Creating temporary blob ID as fallback...');
+          const tempBlobId = `temp_${Date.now()}_${mediaFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          
+          // Store file data locally as fallback
+          const fileData = {
+            name: mediaFile.name,
+            type: mediaFile.type,
+            size: mediaFile.size,
+            data: Array.from(new Uint8Array(await mediaFile.arrayBuffer())),
+            timestamp: Date.now(),
+          };
+          
+          localStorage.setItem(`walrus_temp_${tempBlobId}`, JSON.stringify(fileData));
+          console.log('[sendMessage] File stored locally with temp ID:', tempBlobId);
+          
+          // Append temporary reference to message
+          finalMessage = `${message}\n[IMAGE:${tempBlobId}]`;
+        }
+      }
+
       // Create and execute send message transaction
       const tx = new Transaction();
       const sendMessageTxBuilder = await messagingClient.sendMessage(
         channelId,
         memberCapId,
         currentAccount.address,
-        message,
+        finalMessage,
         encryptedKey,
       );
       await sendMessageTxBuilder(tx);

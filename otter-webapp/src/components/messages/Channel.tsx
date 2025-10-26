@@ -1,10 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMessaging } from '../../hooks/useMessaging';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { MessageInput } from './message-input';
+import { MessageWithMedia } from './message-with-media';
 
 interface ChannelProps {
     channelId: string;
@@ -28,8 +29,6 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         channelError,
         isReady,
     } = useMessaging();
-
-    const [messageText, setMessageText] = useState('');
 
     // Fetch channel and messages on mount
     useEffect(() => {
@@ -57,16 +56,14 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         isLoadingOlderRef.current = false;
     }, [messages]);
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!messageText.trim() || isSendingMessage) {
+    const handleSendMessage = async (message: string, mediaFile?: File) => {
+        if (!message.trim() && !mediaFile || isSendingMessage) {
             return;
         }
 
-        const result = await sendMessage(channelId, messageText);
+        const result = await sendMessage(channelId, message, mediaFile);
         if (result) {
-            setMessageText(''); // Clear input on success
+            // MessageInput will handle clearing the input
         }
     };
 
@@ -156,16 +153,19 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                                 >
                                     <div
                                         className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted'
+                                                ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
+                                                : 'bg-muted border border-border'
                                             }`}
                                     >
                                         {!isCurrentUser && (
-                                            <p className="text-xs opacity-70 mb-1">
+                                            <p className="text-xs text-muted-foreground mb-1">
                                                 {formatAddress(msg.sender)}
                                             </p>
                                         )}
-                                        <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
+                                        <MessageWithMedia 
+                                            content={msg.text} 
+                                            isOwn={isCurrentUser} 
+                                        />
                                         <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
                                             {formatTimestamp(msg.createdAtMs)}
                                         </p>
@@ -179,29 +179,17 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                 <div ref={messagesEndRef} />
             </CardContent>
 
-            <div className="border-t p-4">
+            <div className="border-t">
                 {channelError && (
-                    <div className="mb-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive">
-                        {channelError}
+                    <div className="p-4 border-b bg-destructive/10 border-destructive/20">
+                        <p className="text-sm text-destructive">{channelError}</p>
                     </div>
                 )}
 
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                    <Input
-                        placeholder="Type a message..."
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        disabled={isSendingMessage}
-                        className="flex-1"
-                    />
-                    <Button
-                        type="submit"
-                        disabled={!messageText.trim() || isSendingMessage}
-                        size="icon"
-                    >
-                        <Send className="h-4 w-4" />
-                    </Button>
-                </form>
+                <MessageInput 
+                    onSend={handleSendMessage}
+                    disabled={isSendingMessage}
+                />
             </div>
         </Card>
     );

@@ -26,6 +26,7 @@ module community::community {
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
     use sui::table::{Self, Table};
+    use sui::clock::{Self, Clock};
 
     // ===== Error Codes =====
     const ENotOwner: u64 = 0;
@@ -235,6 +236,7 @@ module community::community {
         _membership: &MembershipNFT,  // Proof of membership
         content: vector<u8>,
         media_ref: vector<u8>,
+        clock: &Clock,  // Add Clock parameter for precise timestamps
         ctx: &mut TxContext
     ) {
         let sender = tx_context::sender(ctx);
@@ -250,7 +252,7 @@ module community::community {
             sender,
             content: string::utf8(content),
             media_ref: string::utf8(media_ref),
-            timestamp: tx_context::epoch(ctx),
+            timestamp: clock::timestamp_ms(clock), // Use Clock timestamp for millisecond precision
         };
 
         let message_id = object::id(&message);
@@ -259,7 +261,7 @@ module community::community {
             message_id,
             community_id,
             sender,
-            timestamp: tx_context::epoch(ctx),
+            timestamp: clock::timestamp_ms(clock), // Use Clock timestamp for events too
         });
 
         transfer::share_object(message);

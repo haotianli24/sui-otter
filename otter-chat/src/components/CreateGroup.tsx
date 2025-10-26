@@ -22,7 +22,7 @@ export function CreateGroup({
     } = useSignAndExecuteTransaction();
 
     // Registry object ID for the community contract
-    const registryId = '0xb1fbb77cfcc1a39ca5ca7a4f1888302a5e7affdef04e9c3a2994e84659f4160c';
+    const registryId = '0x7ece486d159e8b2a8d723552b218ef99a21d3555b199173d2dd49ce2d13b14eb';
 
 
     const validateForm = () => {
@@ -75,7 +75,7 @@ export function CreateGroup({
         const priceInMist = type === 'free' ? 0 : Math.floor(parseFloat(price) * 1_000_000_000);
 
         tx.moveCall({
-            package: '0x7de4958f7ba9d65318f2ab9a08ecbc51d103f9eac9030ffca517e5b0bf5b69ed',
+            package: '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8',
             module: 'community',
             function: 'create_community',
             arguments: [

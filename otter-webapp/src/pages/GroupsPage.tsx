@@ -7,15 +7,17 @@ import { MessageInput } from "@/components/messages/message-input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGroupChat, useSendGroupMessage } from "@/hooks/useGroupMessaging";
+import { useGroupChat, useSendGroupMessage, useGroupMessages } from "@/hooks/useGroupMessaging";
 import { useUserGroups, useCommunityMembers } from "@/hooks/useUserGroups";
 import { Users as UsersIcon, ArrowLeft, Loader2 } from "lucide-react";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 
 type GroupsView = 'gallery' | 'create' | 'chat';
 
 export default function GroupsPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const currentAccount = useCurrentAccount();
     const [currentView, setCurrentView] = useState<GroupsView>('gallery');
     const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
     const [showMembers, setShowMembers] = useState(true);
@@ -29,6 +31,24 @@ export default function GroupsPage() {
       isLoading: isLoadingChat, 
       error: chatError 
   } = useGroupChat(selectedGroupId || '');
+
+  // Get messages for the selected group
+  const { 
+      data: messages = [], 
+      isLoading: isLoadingMessages, 
+      error: messagesError 
+  } = useGroupMessages(selectedGroupId || '');
+
+  // Debug logging
+  console.log('GroupsPage state:', { 
+    currentView, 
+    selectedGroupId, 
+    isLoadingChat, 
+    chatError: chatError?.message, 
+    hasGroupChatData: !!groupChatData,
+    messagesCount: messages.length,
+    isLoadingMessages
+  });
   
   // Get community members for the selected group
   const { data: communityMembers = [] } = useCommunityMembers(selectedGroupId || '');
@@ -48,6 +68,7 @@ export default function GroupsPage() {
                 membershipNftId: groupChatData.membershipNftId,
                 content,
             });
+            // The mutation will automatically invalidate the queries
         } catch (error) {
             console.error('Failed to send message:', error);
         }
@@ -69,6 +90,7 @@ export default function GroupsPage() {
     };
 
     const handleSelectGroup = (groupId: string) => {
+        console.log('Selecting group:', groupId);
         setSelectedGroupId(groupId);
         setCurrentView('chat');
     };
@@ -210,7 +232,21 @@ export default function GroupsPage() {
 
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-6 bg-background">
-                            {groupChatData.messages.length === 0 ? (
+                            {isLoadingMessages ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="text-center space-y-4">
+                                        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                                        <p className="text-muted-foreground">Loading messages...</p>
+                                    </div>
+                                </div>
+                            ) : messagesError ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="text-center space-y-4">
+                                        <p className="text-destructive">Failed to load messages</p>
+                                        <Button onClick={() => window.location.reload()}>Retry</Button>
+                                    </div>
+                                </div>
+                            ) : messages.length === 0 ? (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="text-center text-muted-foreground">
                                         <p className="text-lg">No messages yet</p>
@@ -218,36 +254,55 @@ export default function GroupsPage() {
                                     </div>
                                 </div>
                             ) : (
-                                groupChatData.messages.map((message) => (
-                                    <div key={message.id} className="mb-4">
-                                        <div className="flex items-start gap-3">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarFallback>
-                                                    {message.sender.substring(0, 2).toUpperCase()}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-medium text-sm">
-                                                        {message.sender.substring(0, 8)}...
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {new Date(message.timestamp).toLocaleTimeString()}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm">{message.content}</p>
+                                messages.map((message) => {
+                                  const isOwnMessage = message.sender.toLowerCase() === currentAccount?.address.toLowerCase();
+                                  return (
+                                    <div key={message.id} className={`mb-4 ${isOwnMessage ? 'flex justify-end' : 'flex justify-start'}`}>
+                                      <div className={`flex items-start gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''} max-w-[70%]`}>
+                                        {!isOwnMessage && (
+                                          <Avatar className="h-8 w-8 flex-shrink-0">
+                                            <AvatarFallback className="bg-primary text-primary-foreground">
+                                              {message.sender.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        )}
+                                        <div className={`flex-1 rounded-lg p-3 ${
+                                          isOwnMessage 
+                                            ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm ml-auto' 
+                                            : 'bg-muted border border-border'
+                                        }`}>
+                                          {!isOwnMessage && (
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <span className="font-medium text-xs text-muted-foreground">
+                                                {message.sender.substring(0, 8)}...
+                                              </span>
                                             </div>
+                                          )}
+                                          <p className={`text-sm leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : ''}`}>
+                                            {message.content}
+                                          </p>
                                         </div>
+                                        {isOwnMessage && (
+                                          <Avatar className="h-8 w-8 flex-shrink-0">
+                                            <AvatarFallback className="bg-primary text-primary-foreground">
+                                              {message.sender.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        )}
+                                      </div>
                                     </div>
-                                ))
+                                  );
+                                })
                             )}
                         </div>
 
                         {/* Message input */}
-                        <MessageInput 
-                            onSend={handleSendMessage}
-                            disabled={sendMessageMutation.isPending}
-                        />
+                        {groupChatData.membershipNftId && (
+                            <MessageInput 
+                                onSend={handleSendMessage}
+                                disabled={sendMessageMutation.isPending}
+                            />
+                        )}
                     </div>
 
                     {/* Right panel - Member sidebar */}
@@ -255,6 +310,18 @@ export default function GroupsPage() {
                         members={communityMembers}
                         isOpen={showMembers}
                     />
+                </div>
+            );
+        } else {
+            // Show fallback when groupChatData is null
+            return (
+                <div className="flex h-full">
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center space-y-4">
+                            <p className="text-muted-foreground">Unable to load group chat</p>
+                            <Button onClick={handleBackToGallery}>Back to Groups</Button>
+                        </div>
+                    </div>
                 </div>
             );
         }

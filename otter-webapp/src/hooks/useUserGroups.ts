@@ -3,7 +3,7 @@ import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/2024.4";
 
-const COMMUNITY_PACKAGE_ID = '0x7de4958f7ba9d65318f2ab9a08ecbc51d103f9eac9030ffca517e5b0bf5b69ed';
+const COMMUNITY_PACKAGE_ID = '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8';
 
 export interface Group {
   id: string;
@@ -113,7 +113,10 @@ export function useUserGroups() {
       }
     },
     enabled: !!currentAccount?.address,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 10 * 1000, // Consider data stale after 10 seconds
+    refetchInterval: 15 * 1000, // Poll every 15 seconds for new groups
+    refetchIntervalInBackground: true, // Continue polling when tab is not active
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: 3,
   });
 }
@@ -193,14 +196,17 @@ export function useAllCommunities() {
         return [];
       }
     },
-    staleTime: 60 * 1000, // 1 minute
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    staleTime: 30 * 1000, // Consider data stale after 30 seconds
+    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes for new communities
+    refetchIntervalInBackground: true, // Continue polling when tab is not active
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: 3,
   });
 }
 
 // Hook to fetch members of a specific community
 export function useCommunityMembers(communityId: string) {
+  const suiClient = useSuiClient();
 
   return useQuery({
     queryKey: ['community-members', communityId],
@@ -208,16 +214,42 @@ export function useCommunityMembers(communityId: string) {
       if (!communityId) return [];
 
       try {
+        // First, get the community data to get the owner
+        const communityObject = await suiClient.getObject({
+          id: communityId,
+          options: {
+            showContent: true,
+            showType: true,
+          },
+        });
+
+        if (!communityObject.data?.content || !('fields' in communityObject.data.content)) {
+          return [];
+        }
+
+        const communityFields = communityObject.data.content.fields as any;
+        const owner = communityFields.owner as string;
+        const memberCount = parseInt(communityFields.member_count as string);
+
+        // Start with the owner
+        const members: CommunityMember[] = [
+          {
+            id: owner,
+            name: 'Community Owner',
+            avatar: '👑',
+            address: owner,
+            bio: 'Community creator'
+          }
+        ];
+
+        // Query MembershipNFT objects using GraphQL
         const client = new SuiGraphQLClient({ 
           url: "https://graphql.testnet.sui.io/graphql" 
         });
 
         const query = graphql(`
-          query GetCommunityMembers($type: String!, $communityId: String!) {
-            objects(filter: { 
-              type: $type,
-              objectIds: [$communityId]
-            }, first: 1) {
+          query GetMembershipNFTs($type: String!) {
+            objects(filter: { type: $type }, first: 100) {
               nodes {
                 address
                 asMoveObject {
@@ -233,51 +265,57 @@ export function useCommunityMembers(communityId: string) {
         const result = await client.query({
           query,
           variables: {
-            type: `${COMMUNITY_PACKAGE_ID}::community::Community`,
-            communityId: communityId,
+            type: `${COMMUNITY_PACKAGE_ID}::community::MembershipNFT`,
           },
         });
 
-        if (result.data?.objects?.nodes?.[0]) {
-          const communityData = result.data.objects.nodes[0].asMoveObject?.contents?.json as any;
-          if (communityData) {
-            // For now, return mock members since we need to implement proper member tracking
-            // In a real implementation, you'd query MembershipNFT objects and get member addresses
-            const mockMembers: CommunityMember[] = [
-              {
-                id: communityData.owner || '1',
-                name: 'Community Owner',
-                avatar: '👑',
-                address: communityData.owner || '',
-                bio: 'Community creator'
-              }
-            ];
+        if (result.data?.objects?.nodes) {
+          const membershipNfts = result.data.objects.nodes as any[];
+          
+          // Filter NFTs that belong to this community
+          const communityMemberships = membershipNfts.filter((nft: any) => {
+            const fields = nft.asMoveObject?.contents?.json;
+            return fields && fields.community_id === communityId;
+          });
 
-            // Add some mock members for demonstration
-            if (parseInt(communityData.member_count) > 1) {
-              for (let i = 2; i <= Math.min(parseInt(communityData.member_count), 5); i++) {
-                mockMembers.push({
-                  id: `member-${i}`,
-                  name: `Member ${i}`,
-                  avatar: '👤',
-                  address: `0x${i.toString().padStart(64, '0')}`,
-                  bio: 'Community member'
-                });
-              }
+          // Add actual members from the NFTs
+          communityMemberships.forEach((nft: any) => {
+            const fields = nft.asMoveObject?.contents?.json;
+            if (fields && fields.member !== owner) { // Don't duplicate the owner
+              members.push({
+                id: fields.member,
+                name: `Member ${members.length}`,
+                avatar: '👤',
+                address: fields.member,
+                bio: 'Community member'
+              });
             }
-
-            return mockMembers;
-          }
+          });
         }
 
-        return [];
+        // If we still don't have enough members based on member_count, add mock ones
+        while (members.length < memberCount) {
+          members.push({
+            id: `mock-member-${members.length}`,
+            name: `Member ${members.length}`,
+            avatar: '👤',
+            address: `0x${members.length.toString().padStart(64, '0')}`,
+            bio: 'Community member'
+          });
+        }
+
+        return members;
       } catch (error) {
         console.error('Error fetching community members:', error);
+        // Return empty array instead of throwing to prevent crashes
         return [];
       }
     },
     enabled: !!communityId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 15 * 1000, // Consider data stale after 15 seconds
+    refetchInterval: 20 * 1000, // Poll every 20 seconds for member updates
+    refetchIntervalInBackground: true, // Continue polling when tab is not active
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: 3,
   });
 }
