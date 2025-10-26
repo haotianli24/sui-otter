@@ -14,6 +14,7 @@ import {
     X,
     Waves,
     TrendingUp,
+    Bot,
 } from "lucide-react";
 import SuiLogo from "/sui-sui-logo.svg";
 
@@ -35,6 +36,11 @@ const navItems = [
     },
     {
         name: "Agents",
+        href: "/agents",
+        icon: Bot,
+    },
+    {
+        name: "Copy Trading",
         href: "/copy-trading",
         icon: TrendingUp,
     },
