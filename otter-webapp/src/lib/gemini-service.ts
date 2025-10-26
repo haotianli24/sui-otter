@@ -1,8 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
-import { resolveProtocolName, resolveAddressLabel, resolveValidatorName, resolveCexName } from "./protocol-registry";
+import { resolveProtocolName, resolveAddressLabel } from "./protocol-registry";
 
 // Initialize Gemini AI
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const genAI = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY! });
 const model = genAI.models;
 
 // Simple rate limiting
@@ -41,7 +41,7 @@ interface MessageContext {
 export async function generateTransactionExplanation(txData: TransactionData, context?: MessageContext): Promise<string> {
     try {
         // Check if we have API key
-        if (!process.env.GEMINI_API_KEY) {
+        if (!import.meta.env.VITE_GEMINI_API_KEY) {
             console.log("No Gemini API key, using fallback");
             return generateFallbackExplanation(txData);
         }
@@ -184,12 +184,12 @@ function generateFallbackExplanation(txData: TransactionData): string {
 
 export async function isGeminiAvailable(): Promise<boolean> {
     try {
-        if (!process.env.GEMINI_API_KEY) {
+        if (!import.meta.env.VITE_GEMINI_API_KEY) {
             return false;
         }
 
         // Test with a simple prompt
-        const result = await model.generateContent({
+        await model.generateContent({
             model: "gemini-2.5-flash",
             contents: "Test"
         });

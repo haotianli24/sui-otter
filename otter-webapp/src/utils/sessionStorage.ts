@@ -174,4 +174,3 @@ export function hasValidCachedSession(address: string, packageId: string): boole
   const sessionData = loadSessionKey(address, packageId);
   return sessionData !== null;
 }
-

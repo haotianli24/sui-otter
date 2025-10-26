@@ -1,4 +1,4 @@
-"use client";
+
 
 import { useState } from "react";
 import { Copy, ExternalLink, Loader2, AlertCircle, Check, Eye, EyeOff } from "lucide-react";

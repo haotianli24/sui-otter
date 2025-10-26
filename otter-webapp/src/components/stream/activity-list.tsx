@@ -1,4 +1,4 @@
-"use client";
+
 
 import { useState } from "react";
 import { Loader2, AlertCircle, RefreshCw, ChevronDown, BarChart3 } from "lucide-react";
@@ -33,7 +33,6 @@ export function ActivityList({
     hasMore,
     onRefresh,
     onLoadMore,
-    onViewDetails
 }: ActivityListProps) {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -105,7 +104,6 @@ export function ActivityList({
                         gasUsed={activity.gasUsed}
                         operationsCount={activity.operationsCount}
                         participants={activity.participants}
-                        onViewDetails={onViewDetails}
                     />
                 ))}
             </div>

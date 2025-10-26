@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, ReactNode, useMemo, useContext } from 'react';
 import { useSuiClient } from '@mysten/dapp-kit';
 import { SealClient } from '@mysten/seal';
@@ -79,4 +77,3 @@ export const MessagingClientProvider = ({
     </MessagingClientContext.Provider>
   );
 };
-

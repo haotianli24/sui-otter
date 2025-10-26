@@ -1,10 +1,10 @@
-"use client";
+
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Conversation } from "@/lib/mock-data";
 import { formatDistanceToNow } from "@/lib/format-date";
-import { Lock, Users as UsersIcon } from "lucide-react";
+import { Users as UsersIcon } from "lucide-react";
 
 interface GroupListProps {
   groups: Conversation[];

@@ -1,8 +1,7 @@
-"use client";
+
 
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useMessaging } from "@/contexts/messaging-context";
 import { formatDistanceToNow } from "@/lib/format-date";
 
@@ -81,9 +80,8 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
           <div
             key={channel.id}
             onClick={() => onSelect(channel.id)}
-            className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
-              selectedId === channel.id ? "bg-muted" : ""
-            }`}
+            className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${selectedId === channel.id ? "bg-muted" : ""
+              }`}
           >
             <Avatar className="h-10 w-10">
               <AvatarFallback className="bg-primary text-primary-foreground">

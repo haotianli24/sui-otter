@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useCurrentAccount, useSignPersonalMessage, useSuiClient } from '@mysten/dapp-kit';
 import { SessionKey } from '@mysten/seal';
@@ -8,7 +6,7 @@ import {
   saveSessionKey,
   clearSessionKey,
   clearAllExpiredSessions
-} from '@/utils/sessionStorage';
+} from '../utils/sessionStorage';
 
 interface SessionKeyContextProps {
   sessionKey: SessionKey | null;
@@ -147,4 +145,3 @@ export const useSessionKey = () => {
   }
   return context;
 };
-

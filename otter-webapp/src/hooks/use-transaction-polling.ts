@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface ActivityItem {
@@ -45,7 +43,7 @@ export function useTransactionPolling({
     const [hasMore, setHasMore] = useState(true);
     const [isPolling, setIsPolling] = useState(false);
 
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalRef = useRef<number | null>(null);
     const lastDigestRef = useRef<string | null>(null);
     const cursorRef = useRef<string | undefined>(undefined);
     const isInitialLoadRef = useRef(true);

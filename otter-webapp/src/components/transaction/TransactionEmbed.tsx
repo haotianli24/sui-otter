@@ -1,10 +1,10 @@
-"use client";
+
 
 import { useState, useEffect } from "react";
 import { Copy, ExternalLink, AlertCircle, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCachedTransaction, setCachedTransaction } from "@/lib/transaction-cache";
-import ExpandableText from "./ExpandableText";
+// import ExpandableText from "./ExpandableText";
 
 interface TransactionEmbedProps {
     digest: string;

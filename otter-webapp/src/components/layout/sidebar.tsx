@@ -1,8 +1,7 @@
-"use client";
+
 
 import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +49,7 @@ const navItems = [
 ];
 
 export function Sidebar() {
-    const pathname = usePathname();
+    const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
@@ -95,12 +94,12 @@ export function Sidebar() {
                 <nav className="flex-1 p-4 space-y-1">
                     {navItems.map((item) => {
                         const Icon = item.icon;
-                        const isActive = pathname.startsWith(item.href);
+                        const isActive = location.pathname.startsWith(item.href);
 
                         return (
                             <Link
                                 key={item.href}
-                                href={item.href}
+                                to={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className={cn(
                                     "flex items-center gap-4 px-4 py-5 text-lg font-semibold transition-colors",

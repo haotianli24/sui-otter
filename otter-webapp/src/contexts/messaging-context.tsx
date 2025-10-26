@@ -1,5 +1,3 @@
-"use client";
-
 import React, { createContext, useContext } from 'react';
 import { useMessaging as useMessagingHook } from '@/hooks/useMessaging';
 import { useSessionKey } from '@/providers/SessionKeyProvider';
@@ -50,9 +48,9 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
   const { initializeManually, isInitializing } = useSessionKey();
 
   // Convert SDK channels to legacy format
-  const channels: Channel[] = sdk.channels.map(channel => ({
+  const channels: Channel[] = sdk.channels.map((channel: DecryptedChannelObject) => ({
     id: channel.id.id,
-    members: channel.auth.member_permissions.contents.map((perm: any) => perm.key),
+    members: channel.auth.member_permissions.contents.map((perm: { key: string }) => perm.key),
     createdAt: Number(channel.created_at_ms),
     lastMessage: channel.last_message ? {
       content: channel.last_message.text,
@@ -64,7 +62,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
   // Convert SDK messages to legacy format
   const messagesRecord: Record<string, Message[]> = {};
   if (sdk.currentChannel) {
-    messagesRecord[sdk.currentChannel.id.id] = sdk.messages.map(msg => ({
+    messagesRecord[sdk.currentChannel.id.id] = sdk.messages.map((msg: DecryptMessageResult) => ({
       id: String(msg.createdAtMs),
       content: msg.text,
       sender: msg.sender,

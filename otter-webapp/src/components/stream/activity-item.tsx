@@ -1,4 +1,4 @@
-"use client";
+
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Copy, ExternalLink, Bot, Clock, Users, Zap, Loader2, Check } from "lucide-react";
@@ -15,7 +15,6 @@ interface ActivityItemProps {
     gasUsed: string;
     operationsCount: number;
     participants: string[];
-    onViewDetails?: (digest: string) => void;
 }
 
 export function ActivityItem({
@@ -25,8 +24,7 @@ export function ActivityItem({
     type,
     gasUsed,
     operationsCount,
-    participants,
-    onViewDetails
+    participants
 }: ActivityItemProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [aiExplanation, setAiExplanation] = useState<string | null>(null);

@@ -19,7 +19,7 @@ import { Message, Conversation, Community, User } from "./mock-data";
  * Authenticate user with Enoki zkLogin
  * Integration: /otter/src/app/api/enoki/derive/route.ts
  */
-export async function authenticateWithEnoki(googleJWT: string): Promise<User> {
+export async function authenticateWithEnoki(_googleJWT: string): Promise<User> {
     // TODO: Call /api/enoki/derive with JWT
     // TODO: Get zkLogin address and user data from Supabase
     throw new Error("Not implemented - connect to Enoki API");
@@ -42,7 +42,7 @@ export async function getCurrentUser(): Promise<User> {
  * Create a new direct message channel
  * Integration: messaging.move - create_channel()
  */
-export async function createChannel(recipientAddress: string): Promise<string> {
+export async function createChannel(_recipientAddress: string): Promise<string> {
     // TODO: Call smart contract create_channel
     // TODO: Store channel in Supabase for caching
     throw new Error("Not implemented - call messaging.move");
@@ -62,7 +62,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
  * Fetch messages for a specific channel
  * Integration: Query Sui events + Supabase cache
  */
-export async function fetchMessages(channelId: string): Promise<Message[]> {
+export async function fetchMessages(_channelId: string): Promise<Message[]> {
     // TODO: Query MessageSent events for channel_id
     // TODO: Decrypt content using Seal
     // TODO: Fetch media from Walrus
@@ -74,9 +74,9 @@ export async function fetchMessages(channelId: string): Promise<Message[]> {
  * Integration: messaging.move - send_message()
  */
 export async function sendMessage(
-    channelId: string,
-    content: string,
-    mediaFile?: File
+    _channelId: string,
+    _content: string,
+    _mediaFile?: File
 ): Promise<void> {
     // TODO: Upload media to Walrus if present
     // TODO: Encrypt content with Seal
@@ -89,9 +89,9 @@ export async function sendMessage(
  * Integration: messaging.move - send_crypto()
  */
 export async function sendCrypto(
-    channelId: string,
-    amount: number,
-    token: string = "SUI"
+    _channelId: string,
+    _amount: number,
+    _token: string = "SUI"
 ): Promise<void> {
     // TODO: Call send_crypto smart contract with coin object
     throw new Error("Not implemented - call messaging.move");
@@ -115,7 +115,7 @@ export async function fetchCommunities(): Promise<Community[]> {
  * Create a new community
  * Integration: community.move (to be created)
  */
-export async function createCommunity(params: {
+export async function createCommunity(_params: {
     name: string;
     description: string;
     type: "free" | "paid" | "token-gated";
@@ -134,8 +134,8 @@ export async function createCommunity(params: {
  * Integration: community.move - subscribe_to_community()
  */
 export async function subscribeToCommunity(
-    communityId: string,
-    payment?: number
+    _communityId: string,
+    _payment?: number
 ): Promise<void> {
     // TODO: For paid: call smart contract with payment
     // TODO: For token-gated: verify token balance
@@ -147,7 +147,7 @@ export async function subscribeToCommunity(
  * Fetch group messages
  * Integration: Similar to DM messages but multi-party
  */
-export async function fetchGroupMessages(groupId: string): Promise<Message[]> {
+export async function fetchGroupMessages(_groupId: string): Promise<Message[]> {
     // TODO: Query community_messages from Supabase
     throw new Error("Not implemented - query Supabase");
 }
@@ -157,8 +157,8 @@ export async function fetchGroupMessages(groupId: string): Promise<Message[]> {
  * Integration: community.move - post_to_community()
  */
 export async function sendGroupMessage(
-    groupId: string,
-    content: string
+    _groupId: string,
+    _content: string
 ): Promise<void> {
     // TODO: Call post_to_community smart contract
     throw new Error("Not implemented - call community contract");
@@ -172,7 +172,7 @@ export async function sendGroupMessage(
  * Parse and explain a transaction
  * Integration: Sui RPC + custom parser
  */
-export async function explainTransaction(txDigest: string): Promise<{
+export async function explainTransaction(_txDigest: string): Promise<{
     action: string;
     token?: string;
     amount?: string;
@@ -190,7 +190,7 @@ export async function explainTransaction(txDigest: string): Promise<{
  * Copy a trade
  * Integration: Sui transaction builder + Enoki sponsor
  */
-export async function copyTrade(tradeParams: {
+export async function copyTrade(_tradeParams: {
     action: "buy" | "sell";
     token: string;
     amount: string;
@@ -207,7 +207,7 @@ export async function copyTrade(tradeParams: {
  * Fetch user's portfolio
  * Integration: Sui RPC + price oracle
  */
-export async function fetchPortfolio(userAddress: string): Promise<{
+export async function fetchPortfolio(_userAddress: string): Promise<{
     balance: string;
     balanceUSD: string;
     totalPnL: string;
@@ -229,7 +229,7 @@ export async function fetchPortfolio(userAddress: string): Promise<{
  * Upload file to Walrus
  * Integration: Walrus API
  */
-export async function uploadToWalrus(file: File): Promise<string> {
+export async function uploadToWalrus(_file: File): Promise<string> {
     // TODO: Upload to Walrus storage
     // TODO: Return storage reference
     throw new Error("Not implemented - upload to Walrus");
@@ -239,7 +239,7 @@ export async function uploadToWalrus(file: File): Promise<string> {
  * Fetch file from Walrus
  * Integration: Walrus API
  */
-export async function fetchFromWalrus(reference: string): Promise<string> {
+export async function fetchFromWalrus(_reference: string): Promise<string> {
     // TODO: Fetch from Walrus using reference
     // TODO: Return URL or blob
     throw new Error("Not implemented - fetch from Walrus");
@@ -254,14 +254,14 @@ export async function fetchFromWalrus(reference: string): Promise<string> {
  * Integration: Supabase Realtime
  */
 export function subscribeToMessages(
-    channelId: string,
-    callback: (message: Message) => void
+    _channelId: string,
+    _callback: (message: Message) => void
 ): () => void {
     // TODO: Set up Supabase realtime subscription
     // TODO: Return unsubscribe function
-    console.log("Subscribing to messages:", channelId);
+    console.log("Subscribing to messages:", _channelId);
     return () => {
-        console.log("Unsubscribed from messages:", channelId);
+        console.log("Unsubscribed from messages:", _channelId);
     };
 }
 
@@ -270,14 +270,14 @@ export function subscribeToMessages(
  * Integration: Supabase Realtime
  */
 export function subscribeToCommunityUpdates(
-    communityId: string,
-    callback: (message: Message) => void
+    _communityId: string,
+    _callback: (message: Message) => void
 ): () => void {
     // TODO: Set up Supabase realtime subscription
     // TODO: Return unsubscribe function
-    console.log("Subscribing to community:", communityId);
+    console.log("Subscribing to community:", _communityId);
     return () => {
-        console.log("Unsubscribed from community:", communityId);
+        console.log("Unsubscribed from community:", _communityId);
     };
 }
 
