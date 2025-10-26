@@ -1,10 +1,15 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMessaging } from '../../hooks/useMessaging';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { ArrowLeft, Send } from 'lucide-react';
+import { Card, CardContent } from '../ui/card';
+import { ArrowLeft } from 'lucide-react';
+import { MessageInput } from './message-input';
+import { MessageWithMedia } from './message-with-media';
+import { getDisplayName, useUsername } from '../../hooks/useUsernameRegistry';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { ClickableAvatar } from '../ui/clickable-avatar';
+import { ZeroBackground } from '../ui/zero-background';
 
 interface ChannelProps {
     channelId: string;
@@ -29,8 +34,6 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         isReady,
     } = useMessaging();
 
-    const [messageText, setMessageText] = useState('');
-
     // Fetch channel and messages on mount
     useEffect(() => {
         if (isReady && channelId) {
@@ -38,9 +41,11 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                 fetchMessages(channelId);
             });
 
-            // Auto-refresh messages every 10 seconds
+            // Auto-refresh messages every 10 seconds (only for the current channel)
             const interval = setInterval(() => {
-                fetchMessages(channelId);
+                if (isReady && channelId) {
+                    fetchMessages(channelId);
+                }
             }, 10000);
 
             return () => clearInterval(interval);
@@ -57,16 +62,14 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         isLoadingOlderRef.current = false;
     }, [messages]);
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!messageText.trim() || isSendingMessage) {
+    const handleSendMessage = async (message: string, mediaFile?: File) => {
+        if (!message.trim() && !mediaFile || isSendingMessage) {
             return;
         }
 
-        const result = await sendMessage(channelId, messageText);
+        const result = await sendMessage(channelId, message, mediaFile);
         if (result) {
-            setMessageText(''); // Clear input on success
+            // MessageInput will handle clearing the input
         }
     };
 
@@ -82,9 +85,47 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const formatAddress = (address: string) => {
-        if (!address) return "Unknown";
-        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+    // Component to display message with profile picture and username
+    const MessageWithProfile = ({ msg, isCurrentUser }: { msg: any, isCurrentUser: boolean }) => {
+        const { data: username } = useUsername(msg.sender);
+        const displayName = username || getDisplayName(msg.sender);
+        const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(msg.sender).slice(0, 2).toUpperCase();
+
+        return (
+            <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} gap-3`}>
+                {/* Profile picture and username for other users */}
+                {!isCurrentUser && (
+                    <div className="flex flex-col items-center gap-1">
+                        <ClickableAvatar address={msg.sender} className="h-8 w-8 flex-shrink-0">
+                            <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                    {avatarFallback}
+                                </AvatarFallback>
+                            </Avatar>
+                        </ClickableAvatar>
+                        <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
+                            {displayName}
+                        </span>
+                    </div>
+                )}
+                
+                <div className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
+                    ? 'bg-primary text-primary-foreground border-2 border-primary/20 shadow-sm'
+                    : 'bg-muted border border-border'
+                    }`}>
+                    <MessageWithMedia
+                        content={msg.text}
+                        isOwn={isCurrentUser}
+                        senderName={displayName}
+                        groupName="Channel"
+                    />
+                    <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
+                        {formatTimestamp(msg.createdAtMs)}
+                    </p>
+                </div>
+            </div>
+        );
     };
 
     if (!isReady) {
@@ -98,112 +139,149 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     }
 
     return (
-        <Card className="flex flex-col h-[calc(100vh-200px)]">
-            <CardHeader className="border-b">
+        <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="border-b border-border flex-shrink-0 p-6 bg-card">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={onBack}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div className="flex-1">
-                        <CardTitle>Channel</CardTitle>
-                        <CardDescription className="text-xs">
-                            {channelId.slice(0, 16)}...{channelId.slice(-4)}
-                        </CardDescription>
+                        <h2 className="section-heading">Direct Message</h2>
+                        <p className="muted-text">
+                            Private conversation
+                        </p>
                     </div>
                     {currentChannel && (
-                        <div className="flex gap-4 text-sm">
+                        <div className="flex gap-6 text-sm">
                             <div>
-                                <p className="text-xs text-muted-foreground">Messages</p>
-                                <p className="font-medium">{currentChannel.messages_count}</p>
+                                <p className="small-text">Messages</p>
+                                <p className="card-heading">{currentChannel.messages_count}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground">Members</p>
-                                <p className="font-medium">{currentChannel.auth.member_permissions.contents.length}</p>
+                                <p className="small-text">Members</p>
+                                <p className="card-heading">{currentChannel.auth.member_permissions.contents.length}</p>
                             </div>
                         </div>
                     )}
                 </div>
-            </CardHeader>
-
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
-                {hasMoreMessages && (
-                    <div className="text-center">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleLoadMore}
-                            disabled={isFetchingMessages}
-                        >
-                            {isFetchingMessages ? 'Loading...' : 'Load older messages'}
-                        </Button>
-                    </div>
-                )}
-
-                {isFetchingMessages && messages.length === 0 ? (
-                    <p className="text-center text-sm text-muted-foreground">Loading messages...</p>
-                ) : messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-sm text-muted-foreground">No messages yet. Start the conversation!</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {messages.map((msg, i) => {
-                            const isCurrentUser = msg.sender === currentAccount?.address;
-                            return (
-                                <div
-                                    key={i}
-                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div
-                                        className={`max-w-[70%] rounded-lg p-3 ${isCurrentUser
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted'
-                                            }`}
-                                    >
-                                        {!isCurrentUser && (
-                                            <p className="text-xs opacity-70 mb-1">
-                                                {formatAddress(msg.sender)}
-                                            </p>
-                                        )}
-                                        <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
-                                        <p className={`text-xs mt-1 ${isCurrentUser ? 'opacity-70' : 'text-muted-foreground'}`}>
-                                            {formatTimestamp(msg.createdAtMs)}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                <div ref={messagesEndRef} />
-            </CardContent>
-
-            <div className="border-t p-4">
-                {channelError && (
-                    <div className="mb-3 p-2 bg-destructive/10 border border-destructive/20 rounded text-sm text-destructive">
-                        {channelError}
-                    </div>
-                )}
-
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                    <Input
-                        placeholder="Type a message..."
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        disabled={isSendingMessage}
-                        className="flex-1"
-                    />
-                    <Button
-                        type="submit"
-                        disabled={!messageText.trim() || isSendingMessage}
-                        size="icon"
-                    >
-                        <Send className="h-4 w-4" />
-                    </Button>
-                </form>
             </div>
-        </Card>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 bg-background relative">
+                <ZeroBackground />
+                <div
+                    className="relative z-5"
+                    onMouseMove={(e) => {
+                        // Forward mouse move events to the ZeroBackground
+                        const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+                        if (zeroBackground) {
+                            zeroBackground.dispatchEvent(new MouseEvent('mousemove', {
+                                clientX: e.clientX,
+                                clientY: e.clientY,
+                                bubbles: true
+                            }));
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        // Forward mouse leave events to the ZeroBackground
+                        const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+                        if (zeroBackground) {
+                            zeroBackground.dispatchEvent(new MouseEvent('mouseleave', {
+                                clientX: e.clientX,
+                                clientY: e.clientY,
+                                bubbles: true
+                            }));
+                        }
+                    }}
+                >
+                    {hasMoreMessages && (
+                        <div className="text-center">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleLoadMore}
+                                disabled={isFetchingMessages}
+                            >
+                                {isFetchingMessages ? 'Loading...' : 'Load previous messages'}
+                            </Button>
+                        </div>
+                    )}
+
+                    {isFetchingMessages && messages.length === 0 ? (
+                        <div className="loading-state">
+                            <div className="loading-content">
+                                <p className="muted-text">Loading conversation...</p>
+                            </div>
+                        </div>
+                    ) : messages.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="text-center">
+                                <p className="section-heading mb-2">No messages yet</p>
+                                <p className="muted-text">Send a message to start the conversation</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {messages.map((msg, i) => {
+                                const isCurrentUser = msg.sender === currentAccount?.address;
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} relative z-10`}
+                                    >
+                                        <div
+                                            className={`max-w-[70%] rounded-lg p-4 relative z-10 ${isCurrentUser
+                                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                                : 'bg-card border border-border'
+                                                }`}
+                                            style={{
+                                                backgroundColor: isCurrentUser
+                                                    ? 'hsl(var(--primary))'
+                                                    : 'hsl(var(--card))'
+                                            }}
+                                        >
+                                            {!isCurrentUser && (
+                                                <p className="small-text mb-2">
+                                                    {formatAddress(msg.sender)}
+                                                </p>
+                                            )}
+                                            <MessageWithMedia
+                                                content={msg.text}
+                                                isOwn={isCurrentUser}
+                                                senderName={formatAddress(msg.sender)}
+                                                groupName="Channel"
+                                            />
+                                            <p className={`small-text mt-2 ${isCurrentUser ? 'opacity-70' : 'muted-text'}`}>
+                                                {formatTimestamp(msg.createdAtMs)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                </div>
+            </div>
+
+            {/* Input Area */}
+            <div className="border-t border-border flex-shrink-0 bg-card">
+                {channelError && (
+                    <div className="p-4 border-b border-destructive/20 bg-destructive/10">
+                        <p className="text-sm text-destructive">{channelError}</p>
+                    </div>
+                )}
+
+                <div className="p-6">
+                    <MessageInput
+                        onSend={handleSendMessage}
+                        disabled={isSendingMessage}
+                    />
+                </div>
+            </div>
+        </div>
     );
 }
 

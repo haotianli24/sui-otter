@@ -1,7 +1,7 @@
 import { useSuiClient } from "@mysten/dapp-kit";
 import { useQuery } from "@tanstack/react-query";
 
-const COMMUNITY_PACKAGE_ID = '0x7de4958f7ba9d65318f2ab9a08ecbc51d103f9eac9030ffca517e5b0bf5b69ed';
+const COMMUNITY_PACKAGE_ID = '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8';
 
 export function useCommunityRegistry() {
   const suiClient = useSuiClient();

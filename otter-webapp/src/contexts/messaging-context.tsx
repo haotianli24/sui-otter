@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useMessaging as useMessagingHook } from '@/hooks/useMessaging';
 import { useSessionKey } from '@/providers/SessionKeyProvider';
 import { DecryptedChannelObject, DecryptMessageResult } from '@mysten/messaging';
@@ -45,7 +45,7 @@ const MessagingContext = createContext<MessagingContextType | undefined>(undefin
 
 export function MessagingProvider({ children }: { children: React.ReactNode }) {
   const sdk = useMessagingHook();
-  const { initializeManually, isInitializing } = useSessionKey();
+  const { initializeManually, isInitializing, sessionKey } = useSessionKey();
 
   // Convert SDK channels to legacy format
   const channels: Channel[] = sdk.channels.map((channel: DecryptedChannelObject) => ({
@@ -94,11 +94,29 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     await sdk.fetchChannels();
   };
 
+  // Check if session needs refresh when component mounts or session changes
+  useEffect(() => {
+    if (sessionKey && !isInitializing) {
+      // Check if session is close to expiry (within 5 minutes)
+      const now = Date.now();
+      const creationTime = sessionKey.creationTimeMs;
+      const ttlMs = sessionKey.ttlMin * 60 * 1000;
+      const refreshTime = creationTime + ttlMs - (5 * 60 * 1000); // 5 minutes before expiry
+
+      if (now >= refreshTime) {
+        console.log('Session close to expiry, refreshing automatically...');
+        initializeManually().catch(error => {
+          console.error('Failed to auto-refresh session:', error);
+        });
+      }
+    }
+  }, [sessionKey, isInitializing, initializeManually]);
+
   const value: MessagingContextType = {
     channels,
     messages: messagesRecord,
     currentUser: null, // Not needed with SDK
-    isLoading: sdk.isFetchingChannels || sdk.isFetchingMessages,
+    isLoading: sdk.isFetchingChannels, // Only show loading for channel fetching, not message fetching
     error: sdk.channelError,
     createChannel,
     sendMessage,

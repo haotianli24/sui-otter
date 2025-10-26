@@ -33,9 +33,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     className={cn(
                         "max-w-[450px] p-4 border-2",
                         isSent
-                            ? "bg-primary/10 border-primary"
+                            ? "bg-primary text-primary-foreground border-primary"
                             : "bg-card border-border"
                     )}
+                    style={{
+                        backgroundColor: isSent
+                            ? 'hsl(var(--primary))'
+                            : 'hsl(var(--card))'
+                    }}
                 >
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">📊</span>
@@ -140,6 +145,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                             ? "bg-primary text-primary-foreground"
                             : "bg-card text-card-foreground border border-border"
                     )}
+                    style={{
+                        backgroundColor: isSent
+                            ? 'hsl(var(--primary))'
+                            : 'hsl(var(--card))'
+                    }}
                 >
                     <p className="text-sm break-words">{message.content}</p>
                     <div

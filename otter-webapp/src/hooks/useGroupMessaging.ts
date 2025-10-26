@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentAccount, useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
+import { SuiGraphQLClient } from "@mysten/sui/graphql";
+import { graphql } from "@mysten/sui/graphql/schemas/2024.4";
 
-const COMMUNITY_PACKAGE_ID = '0x7de4958f7ba9d65318f2ab9a08ecbc51d103f9eac9030ffca517e5b0bf5b69ed';
+const COMMUNITY_PACKAGE_ID = '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8';
 
 export interface GroupMessage {
   id: string;
@@ -30,11 +32,15 @@ export function useGroupChat(communityId: string) {
   const currentAccount = useCurrentAccount();
   const suiClient = useSuiClient();
 
+  // Debug logging
+  console.log('useGroupChat called with:', { communityId, hasAccount: !!currentAccount });
+
   // Fetch group chat data
   const groupChatQuery = useQuery({
     queryKey: ['group-chat', communityId],
     queryFn: async (): Promise<GroupChatData | null> => {
-      if (!currentAccount?.address || !communityId) {
+      if (!currentAccount?.address || !communityId || communityId === '') {
+        console.log('useGroupChat: Missing required data', { hasAccount: !!currentAccount, communityId });
         return null;
       }
 
@@ -78,9 +84,86 @@ export function useGroupChat(communityId: string) {
           throw new Error('User is not a member of this community');
         }
 
-        // Step 3: Get group messages (this would need to be implemented in the smart contract)
-        // For now, we'll return empty messages array
-        const messages: GroupMessage[] = [];
+        // Step 3: Get GroupMessage objects for this community using GraphQL
+        let messages: GroupMessage[] = [];
+
+        try {
+          const client = new SuiGraphQLClient({
+            url: "https://graphql.testnet.sui.io/graphql"
+          });
+
+          const query = graphql(`
+            query GetGroupMessages($type: String!) {
+              objects(filter: { type: $type }, first: 50) {
+                nodes {
+                  address
+                  asMoveObject {
+                    contents {
+                      json
+                    }
+                  }
+                }
+              }
+            }
+          `);
+
+          const result = await client.query({
+            query,
+            variables: {
+              type: `${COMMUNITY_PACKAGE_ID}::community::GroupMessage`,
+            },
+          });
+
+          if (result.data?.objects?.nodes) {
+            const messageNodes = result.data.objects.nodes as any[];
+            console.log('GraphQL returned message nodes:', messageNodes.length);
+
+            // Filter messages that belong to this community
+            messages = messageNodes
+              .map((node) => {
+                const fields = node.asMoveObject?.contents?.json;
+                if (!fields || typeof fields !== 'object') {
+                  return null;
+                }
+
+                console.log('Message fields:', fields, 'community_id:', fields.community_id, 'matches:', fields.community_id === communityId);
+
+                // Check if this message belongs to our community
+                if (fields.community_id === communityId) {
+                  // timestamp is epoch number from smart contract
+                  // Store as epoch number for stable timestamp
+                  const epoch = parseInt(fields.timestamp as string);
+                  return {
+                    id: node.address || '',
+                    communityId,
+                    sender: fields.sender as string,
+                    content: fields.content as string,
+                    mediaRef: fields.media_ref as string,
+                    timestamp: epoch, // Store epoch number directly
+                  } as GroupMessage;
+                }
+                return null;
+              })
+              .filter((msg): msg is GroupMessage => msg !== null);
+
+            console.log('Filtered messages count:', messages.length);
+
+            // Sort by timestamp (most recent first) - now with proper Clock timestamps
+            messages.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Debug: Log sorted messages with readable timestamps
+            console.log('[useGroupChat] Messages sorted by timestamp:', messages.map(m => ({
+              id: m.id.substring(0, 8),
+              sender: m.sender.substring(0, 8),
+              timestamp: m.timestamp,
+              readableTime: new Date(m.timestamp).toISOString(),
+              content: m.content.substring(0, 20) + '...'
+            })));
+          }
+        } catch (error) {
+          console.error('Error fetching group messages:', error);
+          // Continue with empty messages array
+        }
 
         return {
           community: {
@@ -96,11 +179,15 @@ export function useGroupChat(communityId: string) {
         };
       } catch (error) {
         console.error('Error fetching group chat data:', error);
-        throw new Error('Failed to load group chat');
+        // Return null instead of throwing to prevent crashes
+        return null;
       }
     },
-    enabled: !!currentAccount?.address && !!communityId,
-    staleTime: 30 * 1000, // 30 seconds
+    enabled: !!currentAccount?.address && !!communityId && communityId !== '',
+    staleTime: 5 * 1000, // Consider data stale after 5 seconds
+    refetchInterval: 10 * 1000, // Poll every 10 seconds for group updates
+    refetchIntervalInBackground: true, // Continue polling when tab is not active
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: 3,
   });
 
@@ -109,7 +196,7 @@ export function useGroupChat(communityId: string) {
 
 export function useSendGroupMessage() {
   const currentAccount = useCurrentAccount();
-  const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -130,7 +217,7 @@ export function useSendGroupMessage() {
 
       const tx = new Transaction();
 
-      // Get the community object
+      // Call the send_group_message function from the smart contract with Clock
       tx.moveCall({
         package: COMMUNITY_PACKAGE_ID,
         module: 'community',
@@ -140,33 +227,25 @@ export function useSendGroupMessage() {
           tx.object(membershipNftId), // User's membership NFT
           tx.pure.string(content), // Message content
           tx.pure.string(mediaRef), // Media reference (empty for text)
+          tx.object('0x6'), // Sui Clock object at well-known address
         ],
       });
 
-      return new Promise((resolve, reject) => {
-        signAndExecute(
-          {
-            transaction: tx,
-          },
-          {
-            onSuccess: (result) => {
-              console.log('Message sent successfully:', result);
-              // Invalidate group chat query to refresh messages
-              queryClient.invalidateQueries({ queryKey: ['group-chat', communityId] });
-              resolve(result);
-            },
-            onError: (error) => {
-              console.error('Failed to send message:', error);
-              reject(error);
-            },
-          }
-        );
-      });
+      const result = await signAndExecute({ transaction: tx });
+      const digest = result.digest;
+
+      console.log('[useSendGroupMessage] Message sent successfully:', { digest, communityId, content });
+
+      // Invalidate group chat query to refresh messages
+      queryClient.invalidateQueries({ queryKey: ['group-chat', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['group-messages', communityId] });
+
+      return { digest };
     },
   });
 }
 
-// Hook to fetch group messages (when implemented in smart contract)
+// Hook to fetch group messages using GraphQL
 export function useGroupMessages(communityId: string) {
   return useQuery({
     queryKey: ['group-messages', communityId],
@@ -176,17 +255,132 @@ export function useGroupMessages(communityId: string) {
       }
 
       try {
-        // TODO: Implement message fetching from smart contract
-        // This would query GroupMessage objects for the community
-        // For now, return empty array
+        // Try GraphQL first
+        try {
+          const client = new SuiGraphQLClient({
+            url: "https://graphql.testnet.sui.io/graphql"
+          });
+
+          const query = graphql(`
+            query GetGroupMessages($type: String!) {
+              objects(filter: { type: $type }, first: 50) {
+                nodes {
+                  address
+                  asMoveObject {
+                    contents {
+                      json
+                    }
+                  }
+                }
+              }
+            }
+          `);
+
+          const result = await client.query({
+            query,
+            variables: {
+              type: `${COMMUNITY_PACKAGE_ID}::community::GroupMessage`,
+            },
+          });
+
+          console.log('[useGroupMessages] GraphQL result:', result);
+          console.log('[useGroupMessages] Querying for type:', `${COMMUNITY_PACKAGE_ID}::community::GroupMessage`);
+
+          // Log errors if they exist
+          if (result.errors && result.errors.length > 0) {
+            console.error('[useGroupMessages] GraphQL errors:', result.errors);
+            console.error('[useGroupMessages] First error details:', result.errors[0]);
+          }
+
+          if (result.data?.objects?.nodes) {
+            const messageNodes = result.data.objects.nodes as any[];
+            console.log('[useGroupMessages] GraphQL returned message nodes:', messageNodes.length);
+
+            // Filter messages that belong to this community
+            const messages = messageNodes
+              .map((node) => {
+                const fields = node.asMoveObject?.contents?.json;
+                if (!fields || typeof fields !== 'object') {
+                  return null;
+                }
+
+                console.log('[useGroupMessages] Checking message:', {
+                  messageFields: fields,
+                  community_id: fields.community_id,
+                  targetCommunityId: communityId,
+                  matches: fields.community_id === communityId
+                });
+
+                // Check if this message belongs to our community
+                if (fields.community_id === communityId) {
+                  // timestamp is now millisecond precision from Sui Clock
+                  // Store as timestamp for proper chronological ordering
+                  const rawTimestamp = fields.timestamp as string;
+                  const timestamp = parseInt(rawTimestamp);
+
+                  console.log('[useGroupMessages] Parsing timestamp:', {
+                    rawTimestamp,
+                    parsedTimestamp: timestamp,
+                    isValid: !isNaN(timestamp),
+                    readableTime: new Date(timestamp).toISOString(),
+                    sender: fields.sender,
+                    content: fields.content.substring(0, 20) + '...'
+                  });
+
+                  return {
+                    id: node.address || '',
+                    communityId,
+                    sender: fields.sender as string,
+                    content: fields.content as string,
+                    mediaRef: fields.media_ref as string,
+                    timestamp: timestamp, // Store millisecond timestamp directly
+                  } as GroupMessage;
+                }
+                return null;
+              })
+              .filter((msg): msg is GroupMessage => msg !== null);
+
+            console.log('[useGroupMessages] Filtered messages count:', messages.length);
+
+            // Sort by timestamp (most recent first) - now with proper Clock timestamps
+            messages.sort((a, b) => a.timestamp - b.timestamp);
+
+            // Debug: Log sorted messages with readable timestamps
+            console.log('[useGroupMessages] Messages sorted by timestamp:', messages.map(m => ({
+              id: m.id.substring(0, 8),
+              sender: m.sender.substring(0, 8),
+              timestamp: m.timestamp,
+              readableTime: new Date(m.timestamp).toISOString(),
+              content: m.content.substring(0, 20) + '...'
+            })));
+
+            return messages;
+          }
+
+          console.log('[useGroupMessages] No message nodes found via GraphQL');
+        } catch (graphqlError) {
+          console.error('[useGroupMessages] GraphQL failed, trying RPC fallback:', graphqlError);
+        }
+
+        // Fallback: Try to get all objects and filter manually
+        // This is a workaround since GraphQL might not be working properly
+        console.log('[useGroupMessages] Trying RPC fallback...');
+
+        // For now, return empty array since we can't easily query shared objects via RPC
+        // In a real implementation, you'd need to track message IDs or use events
+        console.log('[useGroupMessages] RPC fallback not implemented yet');
         return [];
+
       } catch (error) {
         console.error('Error fetching group messages:', error);
-        throw new Error('Failed to fetch messages');
+        return [];
       }
     },
     enabled: !!communityId,
-    staleTime: 10 * 1000, // 10 seconds
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    staleTime: 2 * 1000, // Consider data stale after 2 seconds
+    refetchInterval: 5 * 1000, // Poll every 5 seconds for new messages
+    refetchIntervalInBackground: true, // Continue polling when tab is not active
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnMount: true, // Always refetch when component mounts
   });
 }

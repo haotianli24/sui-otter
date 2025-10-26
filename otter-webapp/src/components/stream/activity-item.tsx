@@ -1,11 +1,12 @@
-
+"use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Copy, ExternalLink, Bot, Clock, Users, Zap, Loader2, Check } from "lucide-react";
+import { Copy, ExternalLink, Bot, Clock, Users, Zap, ArrowDown, ArrowUp, RefreshCw, Activity, Image, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatAddress, resolveAddressLabel } from "@/lib/protocol-registry";
 import { formatDistanceToNow } from "date-fns";
+import TransactionEmbed from "@/components/transaction/TransactionEmbed";
 
 interface ActivityItemProps {
     digest: string;
@@ -15,6 +16,7 @@ interface ActivityItemProps {
     gasUsed: string;
     operationsCount: number;
     participants: string[];
+    onViewDetails?: (digest: string) => void;
 }
 
 export function ActivityItem({
@@ -24,12 +26,10 @@ export function ActivityItem({
     type,
     gasUsed,
     operationsCount,
-    participants
+    participants,
+    onViewDetails,
 }: ActivityItemProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [aiExplanation, setAiExplanation] = useState<string | null>(null);
-    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-    const [aiButtonClicked, setAiButtonClicked] = useState(false);
+    const [showAIExplanation, setShowAIExplanation] = useState(false);
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -42,64 +42,15 @@ export function ActivityItem({
         }
     };
 
-    const generateAIExplanation = async () => {
-        if (isGeneratingAI || aiExplanation) return;
-
-        setAiButtonClicked(true);
-        setIsGeneratingAI(true);
-
-        try {
-            // First, get the transaction data
-            const txResponse = await fetch("/api/transaction-explorer", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ digest }),
-            });
-
-            if (!txResponse.ok) {
-                throw new Error("Transaction not found");
-            }
-
-            const txData = await txResponse.json();
-
-            // Then get the AI explanation
-            const response = await fetch("/api/transaction-explain", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    digest,
-                    txData,
-                    context: {
-                        senderName: resolveAddressLabel(sender) || formatAddress(sender),
-                        isCurrentUser: false,
-                        groupName: "Activity Stream"
-                    }
-                }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setAiExplanation(data.explanation);
-            } else {
-                const errorData = await response.json();
-                setAiExplanation(`Failed to generate AI explanation: ${errorData.error || 'Unknown error'}`);
-            }
-        } catch (error) {
-            console.error("Error generating AI explanation:", error);
-            setAiExplanation("Error: Could not load transaction data. This address may not have any transactions.");
-        } finally {
-            setIsGeneratingAI(false);
-        }
-    };
 
     const getTypeIcon = () => {
         switch (type) {
             case 'incoming':
-                return '📥';
+                return <ArrowDown className="h-5 w-5 text-green-600" />;
             case 'outgoing':
-                return '📤';
+                return <ArrowUp className="h-5 w-5 text-blue-600" />;
             default:
-                return '📊';
+                return <Activity className="h-5 w-5 text-gray-600" />;
         }
     };
 
@@ -137,27 +88,24 @@ export function ActivityItem({
     return (
         <>
             <div className="border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                {/* Collapsed View */}
-                <div
-                    className="p-4 cursor-pointer"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                >
+                {/* Transaction Summary */}
+                <div className="p-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-lg">{getTypeIcon()}</span>
+                            {getTypeIcon()}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                     <Badge variant="outline" className={getTypeColor()}>
                                         {type}
                                     </Badge>
-                                    <span className="text-sm text-muted-foreground">
+                                    <span className="text-sm muted-text">
                                         {formatTime(timestamp)}
                                     </span>
                                 </div>
                                 <p className="text-sm font-medium truncate">
                                     {getSummaryText()}
                                 </p>
-                                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                                <div className="flex items-center gap-4 text-xs muted-text mt-1">
                                     <span className="flex items-center gap-1">
                                         <Zap className="h-3 w-3" />
                                         {gasUsed} SUI
@@ -175,45 +123,32 @@ export function ActivityItem({
                         </div>
 
                         <div className="flex items-center gap-2">
+                            {/* AI Explanation Button - Always visible */}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setIsExpanded(true);
-                                    generateAIExplanation();
+                                    setShowAIExplanation(!showAIExplanation);
                                 }}
-                                disabled={isGeneratingAI}
-                                className={`flex items-center gap-1 text-xs transition-all duration-200 ${aiButtonClicked
-                                    ? 'bg-primary/10 text-primary border border-primary/20'
-                                    : 'hover:bg-accent hover:text-accent-foreground'
+                                className={`p-2 transition-all duration-200 ${showAIExplanation
+                                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                    : ''
                                     }`}
+                                title={showAIExplanation ? "Hide AI explanation" : "Show AI explanation"}
                             >
-                                {isGeneratingAI ? (
-                                    <>
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Generating...
-                                    </>
-                                ) : aiExplanation ? (
-                                    <>
-                                        <Check className="h-3 w-3" />
-                                        Explained
-                                    </>
-                                ) : (
-                                    <>
-                                        <Bot className="h-3 w-3" />
-                                        Explain
-                                    </>
-                                )}
+                                <Bot className="h-4 w-4" />
                             </Button>
+
+                            {/* Copy Button */}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleCopy();
                                 }}
-                                className="flex items-center gap-1 text-xs"
+                                className="flex items-center gap-1"
                             >
                                 {copied ? (
                                     <>
@@ -227,92 +162,38 @@ export function ActivityItem({
                                     </>
                                 )}
                             </Button>
+
+                            {/* View Button */}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    if (onViewDetails) {
+                                        try { onViewDetails(digest); } catch { }
+                                    }
                                     window.open(`https://suiexplorer.com/txblock/${digest}`, '_blank');
                                 }}
-                                className="flex items-center gap-1 text-xs"
+                                className="flex items-center gap-1"
                             >
                                 <ExternalLink className="h-3 w-3" />
                                 View
                             </Button>
-                            {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                            ) : (
-                                <ChevronRight className="h-4 w-4" />
-                            )}
+
                         </div>
                     </div>
                 </div>
 
-                {/* Expanded View */}
-                {isExpanded && (
+                {/* AI Explanation View */}
+                {showAIExplanation && (
                     <div className="border-t border-border p-4 bg-muted/20">
-                        <div className="space-y-4">
-                            {/* Transaction Details */}
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span className="text-muted-foreground">Transaction Hash:</span>
-                                    <p className="font-mono text-xs break-all">{digest}</p>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Sender:</span>
-                                    <p className="font-mono text-xs break-all">
-                                        {resolveAddressLabel(sender) || formatAddress(sender)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Gas Used:</span>
-                                    <p className="font-medium">{gasUsed} SUI</p>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Operations:</span>
-                                    <p className="font-medium">{operationsCount}</p>
-                                </div>
-                            </div>
-
-                            {/* Participants */}
-                            {participants.length > 0 && (
-                                <div>
-                                    <span className="text-sm text-muted-foreground mb-2 block">
-                                        Participants ({participants.length}):
-                                    </span>
-                                    <div className="flex flex-wrap gap-2">
-                                        {participants.slice(0, 5).map((participant, index) => (
-                                            <Badge key={index} variant="secondary" className="text-xs">
-                                                {resolveAddressLabel(participant) || formatAddress(participant)}
-                                            </Badge>
-                                        ))}
-                                        {participants.length > 5 && (
-                                            <Badge variant="outline" className="text-xs">
-                                                +{participants.length - 5} more
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* AI Explanation */}
-                            {(isGeneratingAI || aiExplanation) && (
-                                <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Bot className="h-4 w-4 text-primary" />
-                                        <span className="text-sm font-medium text-primary">AI Explanation</span>
-                                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">✨ AI</span>
-                                    </div>
-                                    {isGeneratingAI ? (
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Generating explanation...
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm leading-relaxed">{aiExplanation}</p>
-                                    )}
-                                </div>
-                            )}
+                        <div className="w-full [&_.max-w-md]:max-w-none">
+                            <TransactionEmbed
+                                digest={digest}
+                                senderName={resolveAddressLabel(sender) || formatAddress(sender)}
+                                isCurrentUser={false}
+                                groupName="Activity Stream"
+                            />
                         </div>
                     </div>
                 )}

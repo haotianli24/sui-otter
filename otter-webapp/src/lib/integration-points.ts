@@ -98,15 +98,15 @@ export async function sendCrypto(
 }
 
 // ============================================================================
-// COMMUNITIES
+// GROUPS
 // ============================================================================
 
 /**
- * Fetch all communities for discovery
- * Integration: Supabase communities table
+ * Fetch all groups for discovery
+ * Integration: Supabase groups table
  */
-export async function fetchCommunities(): Promise<Community[]> {
-    // TODO: Query Supabase communities table
+export async function fetchGroups(): Promise<Community[]> {
+    // TODO: Query Supabase groups table
     // TODO: Calculate P&L from trade history
     throw new Error("Not implemented - query Supabase");
 }

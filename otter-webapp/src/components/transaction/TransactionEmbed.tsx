@@ -1,10 +1,12 @@
-
-
 import { useState, useEffect } from "react";
-import { Copy, ExternalLink, AlertCircle, Loader2, Check } from "lucide-react";
+import { AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { getCachedTransaction, setCachedTransaction } from "@/lib/transaction-cache";
-// import ExpandableText from "./ExpandableText";
+import { generateTransactionExplanation } from "@/lib/gemini-service";
+import { getTransactionDetails } from "@/lib/api/transaction-explorer";
 
 interface TransactionEmbedProps {
     digest: string;
@@ -14,34 +16,20 @@ interface TransactionEmbedProps {
     groupName?: string;
 }
 
-interface TransactionData {
-    digest: string;
-    gasUsed: string;
-    participants: string[];
-    operations: Array<{
-        type: string;
-        description: string;
-        from?: string;
-        to?: string;
-        amount?: string;
-        asset?: string;
-    }>;
-    moveCalls: Array<{
-        package: string;
-        module: string;
-        function: string;
-        arguments: string[];
-    }>;
-}
-
 interface EmbedState {
     loading: boolean;
     error: string | null;
-    data: TransactionData | null;
+    data: any | null;
     explanation: string | null;
 }
 
-export default function TransactionEmbed({ digest, onViewDetails, senderName, isCurrentUser, groupName }: TransactionEmbedProps) {
+export default function TransactionEmbed({
+    digest,
+    onViewDetails,
+    senderName,
+    isCurrentUser,
+    groupName
+}: TransactionEmbedProps) {
     const [state, setState] = useState<EmbedState>({
         loading: true,
         error: null,
@@ -71,18 +59,11 @@ export default function TransactionEmbed({ digest, onViewDetails, senderName, is
                 return;
             }
 
-            // Fetch transaction data
-            const txResponse = await fetch("/api/transaction-explorer", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ digest }),
-            });
-
-            if (!txResponse.ok) {
+            // Fetch real transaction data
+            const txData = await getTransactionDetails(digest);
+            if (!txData) {
                 throw new Error("Transaction not found");
             }
-
-            const txData = await txResponse.json();
 
             // Get AI explanation with context
             const context = {
@@ -91,17 +72,7 @@ export default function TransactionEmbed({ digest, onViewDetails, senderName, is
                 groupName: groupName || "the chat"
             };
 
-            const explainResponse = await fetch("/api/transaction-explain", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ digest, txData, context }),
-            });
-
-            let explanation = "Transaction processed successfully.";
-            if (explainResponse.ok) {
-                const explainData = await explainResponse.json();
-                explanation = explainData.explanation;
-            }
+            const explanation = await generateTransactionExplanation(txData, context);
 
             // Cache the result
             setCachedTransaction(digest, {
@@ -138,17 +109,23 @@ export default function TransactionEmbed({ digest, onViewDetails, senderName, is
         }
     };
 
+    const handleRefresh = () => {
+        // Clear cache for this specific digest
+        localStorage.removeItem(`transaction_cache_${digest}`);
+        // Reload data
+        loadTransactionData();
+    };
+
     const getStatusColor = () => {
         if (state.error) return "border-red-500";
-        if (state.data?.operations.some(op => op.type === "transfer")) return "border-green-500";
+        if (state.data?.operations.some((op: any) => op.type === "transfer")) return "border-green-500";
         return "border-blue-500";
     };
 
     const getStatusIcon = () => {
         if (state.error) return <AlertCircle className="h-4 w-4 text-red-500" />;
-        if (state.data?.operations.some(op => op.type === "transfer")) return "💱";
+        if (state.data?.operations.some((op: any) => op.type === "transfer")) return "💱";
         return "📊";
-        return "⚡";
     };
 
     if (state.loading) {
@@ -157,137 +134,151 @@ export default function TransactionEmbed({ digest, onViewDetails, senderName, is
 
     if (state.error) {
         return (
-            <div className={`max-w-md border-l-4 ${getStatusColor()} bg-card border border-border p-4`}>
-                <div className="flex items-center gap-2 mb-2">
-                    {getStatusIcon()}
-                    <span className="font-medium text-sm">Transaction Error</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">{state.error}</p>
-                <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={loadTransactionData}
-                        className="text-xs"
-                    >
-                        Retry
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopy}
-                        className="text-xs"
-                    >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy Hash
-                    </Button>
-                </div>
-            </div>
+            <Card className={cn("w-full max-w-md border-2 border-red-500", getStatusColor())}>
+                <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm font-medium text-red-500">Transaction Error</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{state.error}</p>
+                    <div className="flex items-center gap-2">
+                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                            {digest.slice(0, 8)}...{digest.slice(-8)}
+                        </code>
+                        <button
+                            onClick={handleCopy}
+                            className="text-xs px-3 py-1 border rounded bg-card hover:bg-accent disabled:opacity-50"
+                        >
+                            {copied ? "Copied!" : "Copy Hash"}
+                        </button>
+                    </div>
+                </CardContent>
+            </Card>
         );
     }
 
-    if (!state.data) return null;
-
     return (
-        <div className={`max-w-md border-l-4 ${getStatusColor()} bg-card border border-border p-4`}>
-            {/* Header */}
-            <div className="flex items-center gap-2 mb-3">
-                {getStatusIcon()}
-                <span className="font-medium text-sm">Transaction Explained</span>
-                <span className="text-xs text-muted-foreground">✨ AI</span>
-            </div>
-
-            {/* AI Summary */}
-            {state.explanation && (
-                <div className="mb-3 p-3 bg-muted/50 border border-border">
-                    <p className="text-sm leading-relaxed">{state.explanation}</p>
+        <Card className={cn("w-full max-w-md border-2", getStatusColor())}>
+            <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg">{getStatusIcon()}</span>
+                        <CardTitle className="text-sm">Transaction</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={handleCopy}
+                            className="text-xs px-3 py-1 border rounded bg-card hover:bg-accent disabled:opacity-50"
+                        >
+                            {copied ? "Copied!" : "Copy Hash"}
+                        </button>
+                        <button
+                            onClick={handleRefresh}
+                            className="text-xs px-3 py-1 border rounded bg-card hover:bg-accent disabled:opacity-50"
+                            disabled={state.loading}
+                        >
+                            {state.loading ? "Loading..." : "Refresh"}
+                        </button>
+                        {onViewDetails && (
+                            <Button size="sm" variant="ghost" onClick={() => onViewDetails(digest)}>
+                                <ExternalLink className="h-3 w-3" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
-            )}
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
-                <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">⛽ Gas:</span>
-                    <span className="font-medium">{state.data.gasUsed} SUI</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">👥 Users:</span>
-                    <span className="font-medium">{state.data.participants.length}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">📝 Ops:</span>
-                    <span className="font-medium">{state.data.operations.length}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">📜 Calls:</span>
-                    <span className="font-medium">{state.data.moveCalls?.length || 0}</span>
-                </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-                {onViewDetails && (
-                    <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => onViewDetails(digest)}
-                        className="text-xs bg-primary hover:bg-primary/90"
-                    >
-                        View Details
-                    </Button>
-                )}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopy}
-                    className="text-xs"
-                >
-                    {copied ? (
-                        <>
-                            <Check className="h-3 w-3 mr-1" />
-                            Copied
-                        </>
-                    ) : (
-                        <>
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy Hash
-                        </>
+            </CardHeader>
+            <CardContent className="pt-0">
+                <div className="space-y-3">
+                    {/* AI Summary - Show first and prominently */}
+                    {state.explanation && (
+                        <div className="bg-muted/50 p-3 rounded-lg border">
+                            <div className="flex items-start gap-2">
+                                <div className="text-lg">🤖</div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-foreground leading-relaxed">
+                                        {state.explanation}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     )}
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(`https://suiexplorer.com/txblock/${digest}`, '_blank')}
-                    className="text-xs"
-                >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Explorer
-                </Button>
-            </div>
-        </div>
+
+                    {/* Transaction Digest */}
+                    <div>
+                        <span className="text-xs text-muted-foreground">Transaction ID:</span>
+                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono block break-all mt-1">
+                            {digest}
+                        </code>
+                    </div>
+
+                    {/* Transaction Details */}
+                    {state.data && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Gas Used:</span>
+                                <span className="font-mono">{state.data.gasUsed} SUI</span>
+                            </div>
+
+                            {state.data.protocolName && (
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">Protocol:</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                        {state.data.protocolName}
+                                    </Badge>
+                                </div>
+                            )}
+
+                            {state.data.operations && state.data.operations.length > 0 && (
+                                <div>
+                                    <span className="text-xs text-muted-foreground">Operations:</span>
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                        {state.data.operations.slice(0, 3).map((op: any, index: number) => (
+                                            <div key={index} className="text-xs flex items-center gap-1">
+                                                <Badge variant="outline" className="text-xs">
+                                                    {op.type}
+                                                </Badge>
+                                                {op.description && (
+                                                    <span className="text-muted-foreground">
+                                                        {op.description}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {state.data.operations.length > 3 && (
+                                            <div className="text-xs text-muted-foreground">
+                                                +{state.data.operations.length - 3} more
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 
-// Skeleton loader component
 function TransactionEmbedSkeleton() {
     return (
-        <div className="max-w-md border-l-4 border-muted bg-card border border-border p-4">
-            <div className="flex items-center gap-2 mb-3">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                <span className="font-medium text-sm text-muted-foreground">Loading Transaction...</span>
-            </div>
-
-            <div className="space-y-2">
-                <div className="h-4 bg-muted animate-pulse rounded" />
-                <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mt-3">
-                <div className="h-3 bg-muted animate-pulse rounded" />
-                <div className="h-3 bg-muted animate-pulse rounded" />
-                <div className="h-3 bg-muted animate-pulse rounded" />
-                <div className="h-3 bg-muted animate-pulse rounded" />
-            </div>
-        </div>
+        <Card className="w-full max-w-md border-2 border-muted">
+            <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+                    <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+                </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+                <div className="space-y-3">
+                    <div className="h-6 bg-muted animate-pulse rounded" />
+                    <div className="space-y-2">
+                        <div className="h-3 bg-muted animate-pulse rounded w-3/4" />
+                        <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

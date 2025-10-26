@@ -15,6 +15,7 @@ import {
     Waves,
     TrendingUp,
 } from "lucide-react";
+import SuiLogo from "/sui-sui-logo.svg";
 
 const navItems = [
     {
@@ -85,14 +86,14 @@ export function Sidebar() {
             {/* Sidebar */}
             <div
                 className={cn(
-                    "w-80 h-screen bg-card border-r border-border flex flex-col transition-transform md:translate-x-0 fixed md:relative z-40",
+                    "w-64 h-screen bg-card border-r border-border flex flex-col transition-transform md:translate-x-0 fixed md:relative z-40",
                     isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Logo */}
-                <div className="h-28 flex items-center px-6 border-b border-border">
-                    <h1 className="text-3xl font-bold text-foreground">
-                        OxTTER
+                <div className="h-20 flex items-center px-6 border-b border-border">
+                    <h1 className="text-2xl font-bold text-foreground">
+                        OTTER
                     </h1>
                 </div>
 
@@ -123,11 +124,13 @@ export function Sidebar() {
 
                 {/* Footer */}
                 <div className="p-6 border-t border-border">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                            <span className="text-xs font-bold text-primary-foreground">S</span>
-                        </div>
-                        <span className="text-sm">Powered by Sui</span>
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <span className="text-sm">Powered by</span>
+                        <img
+                            src={SuiLogo}
+                            alt="Sui Logo"
+                            className="w-6 h-6"
+                        />
                     </div>
                 </div>
             </div>

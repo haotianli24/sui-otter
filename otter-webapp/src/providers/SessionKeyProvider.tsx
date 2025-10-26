@@ -20,6 +20,7 @@ const SessionKeyContext = createContext<SessionKeyContextProps | undefined>(unde
 
 const PACKAGE_ID = '0x984960ebddd75c15c6d38355ac462621db0ffc7d6647214c802cd3b685e1af3d';
 const TTL_MINUTES = 30;
+const REFRESH_BUFFER_MINUTES = 5; // Refresh session 5 minutes before expiry
 
 export const SessionKeyProvider = ({ children }: { children: ReactNode }) => {
   const suiClient = useSuiClient();
@@ -34,6 +35,36 @@ export const SessionKeyProvider = ({ children }: { children: ReactNode }) => {
     if (currentAccount?.address) {
       clearSessionKey(currentAccount.address, PACKAGE_ID);
       setSessionKey(null);
+    }
+  };
+
+  const needsRefresh = (sessionKey: SessionKey): boolean => {
+    if (!sessionKey) return false;
+
+    try {
+      // Check if session is close to expiry (within refresh buffer)
+      const now = Date.now();
+      const creationTime = sessionKey.creationTimeMs;
+      const ttlMs = sessionKey.ttlMin * 60 * 1000;
+      const refreshTime = creationTime + ttlMs - (REFRESH_BUFFER_MINUTES * 60 * 1000);
+
+      return now >= refreshTime;
+    } catch (error) {
+      console.error('Error checking session refresh need:', error);
+      return true; // If we can't check, assume it needs refresh
+    }
+  };
+
+  const refreshSessionIfNeeded = async () => {
+    if (!sessionKey || !currentAccount?.address) return;
+
+    if (needsRefresh(sessionKey)) {
+      console.log('Session needs refresh, refreshing automatically...');
+      try {
+        await initializeManually();
+      } catch (error) {
+        console.error('Failed to auto-refresh session:', error);
+      }
     }
   };
 
@@ -122,6 +153,18 @@ export const SessionKeyProvider = ({ children }: { children: ReactNode }) => {
 
     loadCachedSession();
   }, [currentAccount?.address, suiClient]);
+
+  // Set up periodic session refresh check
+  useEffect(() => {
+    if (!sessionKey || !currentAccount?.address) return;
+
+    // Check every 5 minutes if session needs refresh
+    const interval = setInterval(() => {
+      refreshSessionIfNeeded();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [sessionKey, currentAccount?.address]);
 
   // Clean up on disconnect
   useEffect(() => {

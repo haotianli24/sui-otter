@@ -24,29 +24,29 @@ export function CreateGroup({
     const [type, setType] = useState<"free" | "paid">("free");
     const [maxMembers, setMaxMembers] = useState(50);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    
+
     const {
         mutate: signAndExecute,
         isPending,
     } = useSignAndExecuteTransaction();
 
     // Registry object ID for the community contract
-    const registryId = '0xb1fbb77cfcc1a39ca5ca7a4f1888302a5e7affdef04e9c3a2994e84659f4160c';
+    const registryId = '0x7ece486d159e8b2a8d723552b218ef99a21d3555b199173d2dd49ce2d13b14eb';
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        
+
         if (!name.trim()) {
             newErrors.name = "Community name is required";
         }
-        
+
         if (!description.trim()) {
             newErrors.description = "Community description is required";
         }
-        
+
         if (type === "paid") {
             if (!price.trim()) {
-                newErrors.price = "Price is required for paid communities";
+                newErrors.price = "Price is required for paid groups";
             } else {
                 const priceValue = parseFloat(price);
                 if (isNaN(priceValue) || priceValue < 0.01 || priceValue > 1000) {
@@ -54,11 +54,11 @@ export function CreateGroup({
                 }
             }
         }
-        
+
         if (maxMembers < 3 || maxMembers > 1000) {
             newErrors.maxMembers = "Max members must be between 3 and 1000";
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -72,7 +72,7 @@ export function CreateGroup({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm() || !currentAccount) {
             return;
         }
@@ -83,7 +83,7 @@ export function CreateGroup({
         const priceInMist = type === 'free' ? 0 : Math.floor(parseFloat(price) * 1_000_000_000);
 
         tx.moveCall({
-            package: '0x7de4958f7ba9d65318f2ab9a08ecbc51d103f9eac9030ffca517e5b0bf5b69ed',
+            package: '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8',
             module: 'community',
             function: 'create_community',
             arguments: [
@@ -170,7 +170,7 @@ export function CreateGroup({
                         </Select>
                     </div>
 
-                    {/* Price (only for paid communities) */}
+                    {/* Price (only for paid groups) */}
                     {type === "paid" && (
                         <div className="space-y-2">
                             <Label htmlFor="price">Cost (SUI)</Label>
@@ -179,13 +179,13 @@ export function CreateGroup({
                                 type="number"
                                 placeholder="0.1"
                                 value={price}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                const value = e.target.value;
-                                // Allow empty string, numbers, and one decimal point
-                                if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                                    setPrice(value);
-                                }
-                            }}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                    const value = e.target.value;
+                                    // Allow empty string, numbers, and one decimal point
+                                    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                                        setPrice(value);
+                                    }
+                                }}
                                 className={errors.price ? "border-destructive" : ""}
                                 min="0.01"
                                 max="1000"
@@ -226,8 +226,8 @@ export function CreateGroup({
 
                     {/* Submit Buttons */}
                     <div className="flex gap-3 pt-4">
-                        <Button 
-                            type="submit" 
+                        <Button
+                            type="submit"
                             disabled={isPending || !currentAccount}
                             className="flex-1"
                         >
