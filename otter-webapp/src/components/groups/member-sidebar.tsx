@@ -1,11 +1,11 @@
 
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "@/lib/mock-data";
+import { CommunityMember } from "@/hooks/useUserGroups";
 import { Users as UsersIcon } from "lucide-react";
 
 interface MemberSidebarProps {
-  members: User[];
+  members: CommunityMember[];
   isOpen: boolean;
 }
 

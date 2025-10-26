@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGroupChat, useSendGroupMessage } from "@/hooks/useGroupMessaging";
-import { useUserGroups } from "@/hooks/useUserGroups";
+import { useUserGroups, useCommunityMembers } from "@/hooks/useUserGroups";
 import { Users as UsersIcon, ArrowLeft, Loader2 } from "lucide-react";
 
 type GroupsView = 'gallery' | 'create' | 'chat';
@@ -20,15 +20,18 @@ export default function GroupsPage() {
     const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>();
     const [showMembers, setShowMembers] = useState(true);
 
-    // Get user's groups for the group list
-    const { data: userGroups = [] } = useUserGroups();
-    
-    // Get group chat data for the selected group
-    const { 
-        data: groupChatData, 
-        isLoading: isLoadingChat, 
-        error: chatError 
-    } = useGroupChat(selectedGroupId || '');
+  // Get user's groups for the group list
+  const { data: userGroups = [] } = useUserGroups();
+  
+  // Get group chat data for the selected group
+  const { 
+      data: groupChatData, 
+      isLoading: isLoadingChat, 
+      error: chatError 
+  } = useGroupChat(selectedGroupId || '');
+  
+  // Get community members for the selected group
+  const { data: communityMembers = [] } = useCommunityMembers(selectedGroupId || '');
     
     // Send message mutation
     const sendMessageMutation = useSendGroupMessage();
@@ -249,7 +252,7 @@ export default function GroupsPage() {
 
                     {/* Right panel - Member sidebar */}
                     <MemberSidebar
-                        members={[]} // TODO: Implement member list
+                        members={communityMembers}
                         isOpen={showMembers}
                     />
                 </div>
