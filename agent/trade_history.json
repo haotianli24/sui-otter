@@ -1,0 +1,16 @@
+{
+  "trades": [
+    {
+      "timestamp": "2025-10-26T01:23:12.040207",
+      "trader": "0xe39edd65db983010aabd984c00d3912fa53f4aaa200c464d2649ced240df841d",
+      "follower": "0xuser_follower",
+      "action": "transfer",
+      "asset": "SUI",
+      "amount": "1000000",
+      "success": true,
+      "txDigest": "9mcAAHbweiyi33WnMBTYX3hzW2axKyNzfiiXnx5Pe1bH"
+    }
+  ],
+  "lastUpdated": "2025-10-26T01:23:12.040287",
+  "totalTrades": 1
+}

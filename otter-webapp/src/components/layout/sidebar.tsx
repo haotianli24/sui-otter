@@ -13,6 +13,7 @@ import {
     Menu,
     X,
     Waves,
+    TrendingUp,
 } from "lucide-react";
 
 const navItems = [
@@ -30,6 +31,11 @@ const navItems = [
         name: "Stream",
         href: "/stream",
         icon: Waves,
+    },
+    {
+        name: "Copy Trading",
+        href: "/copy-trading",
+        icon: TrendingUp,
     },
     {
         name: "Discover",

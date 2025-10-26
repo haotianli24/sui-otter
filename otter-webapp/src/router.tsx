@@ -6,6 +6,7 @@ import StreamPage from './pages/StreamPage';
 import DiscoverPage from './pages/DiscoverPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import CopyTradingPage from './pages/CopyTradingPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const router = createBrowserRouter([
@@ -47,6 +48,11 @@ export const router = createBrowserRouter([
                 path: 'settings',
                 element: <SettingsPage />,
                 errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
+            },
+            {
+                path: 'copy-trading',
+                element: <CopyTradingPage />,
+                errorElement: <ErrorBoundary><div>Error loading copy trading</div></ErrorBoundary>,
             },
         ],
     },
