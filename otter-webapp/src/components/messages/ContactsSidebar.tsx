@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMessaging } from "@/contexts/messaging-context";
 import { cn } from "@/lib/utils";
+import { useUsername } from "@/hooks/useUsernameRegistry";
+import { getDisplayName } from "@/contexts/UserProfileContext";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 
 export default function ContactsSidebar() {
   const {
@@ -13,6 +16,7 @@ export default function ContactsSidebar() {
     initializeSession,
     isInitializing,
   } = useMessaging();
+  const currentAccount = useCurrentAccount();
   const [recipient, setRecipient] = useState("");
   const [creating, setCreating] = useState(false);
   const [dotCount, setDotCount] = useState(1);
@@ -128,21 +132,7 @@ export default function ContactsSidebar() {
               })
               .map((ch) => (
                 <li key={ch.id}>
-                  <button
-                    className="w-full text-left p-4 border-b border-border hover:bg-accent transition-smooth"
-                    onClick={() => {
-                      window.location.hash = ch.id;
-                    }}
-                  >
-                    <div className="card-heading truncate">Chat with User {ch.id.slice(-4)}</div>
-                    {ch.lastMessage ? (
-                      <div className="small-text muted-text truncate mt-1">
-                        {ch.lastMessage.content.length > 50 ? `${ch.lastMessage.content.slice(0, 50)}…` : ch.lastMessage.content}
-                      </div>
-                    ) : (
-                      <div className="small-text muted-text mt-1">No messages yet</div>
-                    )}
-                  </button>
+                  <ChannelItem channel={ch} currentAccount={currentAccount} />
                 </li>
               ))}
             {isLoading && channels.length > 0 && (
@@ -154,5 +144,47 @@ export default function ContactsSidebar() {
         )}
       </div>
     </div>
+  );
+}
+
+// Channel Item Component
+interface ChannelItemProps {
+  channel: {
+    id: string;
+    members: string[];
+    createdAt: number;
+    lastMessage?: {
+      content: string;
+      sender: string;
+      timestamp: number;
+    };
+  };
+  currentAccount: any;
+}
+
+function ChannelItem({ channel, currentAccount }: ChannelItemProps) {
+  // Get the other member (not the current user)
+  const otherMember = channel.members.find(member => member !== currentAccount?.address);
+  const { data: username } = useUsername(otherMember || '');
+  const displayName = username || getDisplayName(otherMember || '');
+
+  return (
+    <button
+      className="w-full text-left p-4 border-b border-border hover:bg-accent transition-smooth"
+      onClick={() => {
+        window.location.hash = channel.id;
+      }}
+    >
+      <div className="card-heading truncate">
+        {otherMember ? `Chat with ${displayName}` : 'Group Chat'}
+      </div>
+      {channel.lastMessage ? (
+        <div className="small-text muted-text truncate mt-1">
+          {channel.lastMessage.content.length > 50 ? `${channel.lastMessage.content.slice(0, 50)}…` : channel.lastMessage.content}
+        </div>
+      ) : (
+        <div className="small-text muted-text mt-1">No messages yet</div>
+      )}
+    </button>
   );
 }

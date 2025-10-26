@@ -12,7 +12,7 @@ module copy_trading::copy_trading {
 
     /// Errors
     const ENotFollower: u64 = 1;
-    const EAlreadyFollowing: u64 = 2;
+    const ECannotFollowSelf: u64 = 2;
     const EInvalidCopyPercentage: u64 = 3;
     const EInsufficientBalance: u64 = 4;
     const ECopyingDisabled: u64 = 5;
@@ -101,7 +101,7 @@ module copy_trading::copy_trading {
         
         // Validate inputs
         assert!(copy_percentage > 0 && copy_percentage <= 100, EInvalidCopyPercentage);
-        assert!(follower != trader, EAlreadyFollowing);
+        assert!(follower != trader, ECannotFollowSelf);
 
         // Create relationship
         let relationship = FollowerRelationship {

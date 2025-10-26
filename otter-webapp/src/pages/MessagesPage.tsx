@@ -85,7 +85,7 @@ function MessagesPageContent() {
             ) : (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center space-y-4">
-                        <h1 className="page-heading">Welcome to Messages</h1>
+                        <h1 className="page-heading">Welcome to Otter</h1>
                         <p className="page-subtitle">Please sign in to continue</p>
                         <div className="pt-2">
                             <WalletConnection />
