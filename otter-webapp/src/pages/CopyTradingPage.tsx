@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, Users, Activity, Settings, Check, X, Search, Plus, Loader2, Download, Copy } from "lucide-react";
+import { TrendingUp, Users, Activity, Settings, Check, X, Search, Plus, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { 
+    buildFollowTraderTx, 
+    buildUnfollowTraderTx, 
+    getFollowedTraders
+} from "@/lib/copy-trading-contract";
 
 interface Trader {
     address: string;
@@ -22,6 +28,10 @@ interface CopiedTrade {
 }
 
 export default function CopyTradingPage() {
+    const currentAccount = useCurrentAccount();
+    const suiClient = useSuiClient();
+    const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+    
     const [activeTab, setActiveTab] = useState<'traders' | 'following' | 'history'>('traders');
     const [searchQuery, setSearchQuery] = useState("");
     const [followedTraders, setFollowedTraders] = useState<Set<string>>(new Set());
@@ -31,41 +41,91 @@ export default function CopyTradingPage() {
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
     const [syncMessage, setSyncMessage] = useState<string | null>(null);
+    const [showMigrationBanner, setShowMigrationBanner] = useState(false);
     
-    // Load followed traders and traders list from localStorage on mount
+    // Load followed traders from smart contract on mount
     useEffect(() => {
-        const saved = localStorage.getItem('followedTraders');
-        if (saved) {
-            try {
-                setFollowedTraders(new Set(JSON.parse(saved)));
-            } catch (e) {
-                console.error('Failed to load followedTraders:', e);
+        const loadFollowedTraders = async () => {
+            if (!currentAccount?.address) {
+                console.log('⚠️ No wallet connected - clearing follows');
+                // Clear follows when wallet disconnected
+                setFollowedTraders(new Set());
+                setShowMigrationBanner(false);
+                setIsInitialized(true);
+                return;
             }
-        }
-        
-        const savedTraders = localStorage.getItem('tradersList');
-        if (savedTraders) {
+            
             try {
-                setTraders(JSON.parse(savedTraders));
-            } catch (e) {
-                console.error('Failed to load tradersList:', e);
+                console.log('🔍 Loading followed traders from smart contract...');
+                const followed = await getFollowedTraders(suiClient, currentAccount.address);
+                console.log('✅ Loaded followed traders from contract:', followed);
+                
+                // If contract is empty, check wallet-specific localStorage for migration
+                if (followed.length === 0) {
+                    const walletKey = `followedTraders_${currentAccount.address}`;
+                    const saved = localStorage.getItem(walletKey);
+                    
+                    // Also check old global key for backwards compatibility
+                    const oldSaved = !saved ? localStorage.getItem('followedTraders') : null;
+                    
+                    const localData = saved || oldSaved;
+                    if (localData) {
+                        try {
+                            const localFollows = JSON.parse(localData);
+                            if (localFollows.length > 0) {
+                                console.log('📦 Migrating follows from localStorage for this wallet:', localFollows);
+                                console.log('💡 Tip: Click "Follow" again to save these to the blockchain');
+                                setFollowedTraders(new Set(localFollows));
+                                setShowMigrationBanner(true);
+                                
+                                // Save to wallet-specific key
+                                localStorage.setItem(walletKey, JSON.stringify(localFollows));
+                                return; // Skip setting empty contract data
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse localStorage:', e);
+                        }
+                    }
+                }
+                
+                setFollowedTraders(new Set(followed));
+            } catch (error) {
+                console.error('❌ Error loading followed traders from contract:', error);
+                // Fallback to localStorage on error
+                const saved = localStorage.getItem('followedTraders');
+                if (saved) {
+                    try {
+                        setFollowedTraders(new Set(JSON.parse(saved)));
+                    } catch (e) {
+                        console.error('Failed to load followedTraders:', e);
+                    }
+                }
+            } finally {
+                // Load traders list from localStorage
+                const savedTraders = localStorage.getItem('tradersList');
+                if (savedTraders) {
+                    try {
+                        setTraders(JSON.parse(savedTraders));
+                    } catch (e) {
+                        console.error('Failed to load tradersList:', e);
+                    }
+                }
+                setIsInitialized(true);
             }
-        }
+        };
         
-        setIsInitialized(true);
-    }, []);
+        loadFollowedTraders();
+    }, [currentAccount?.address, suiClient]);
     
-    // Save to localStorage and notify agent whenever followedTraders changes (after initialization)
+    // Save to wallet-specific localStorage whenever followedTraders changes (after initialization)
     useEffect(() => {
-        if (!isInitialized) return;
+        if (!isInitialized || !currentAccount?.address) return;
         
-        localStorage.setItem('followedTraders', JSON.stringify(Array.from(followedTraders)));
+        const walletKey = `followedTraders_${currentAccount.address}`;
+        localStorage.setItem(walletKey, JSON.stringify(Array.from(followedTraders)));
         
-        // Save to a file that the agent can read
-        if (followedTraders.size > 0) {
-            saveFollowedTradersForAgent(Array.from(followedTraders));
-        }
-    }, [followedTraders, isInitialized]);
+        console.log(`💾 Saved follows for wallet ${currentAccount.address.slice(0, 8)}...`);
+    }, [followedTraders, isInitialized, currentAccount?.address]);
     
     // Save traders list to localStorage whenever it changes (after initialization)
     useEffect(() => {
@@ -74,8 +134,14 @@ export default function CopyTradingPage() {
         localStorage.setItem('tradersList', JSON.stringify(traders));
     }, [traders, isInitialized]);
     
-    // Load trade history on mount and periodically
+    // Load trade history on mount and periodically (wallet-specific)
     useEffect(() => {
+        // Clear history if no wallet connected
+        if (!currentAccount?.address) {
+            setCopiedTrades([]);
+            return;
+        }
+        
         const loadTradeHistory = async () => {
             try {
                 setIsLoadingHistory(true);
@@ -85,7 +151,12 @@ export default function CopyTradingPage() {
                     console.log('📊 Trade history loaded:', data.totalTrades, 'total trades');
                     
                     if (data.trades && data.trades.length > 0) {
-                        const trades = data.trades.map((t: any) => ({
+                        // Filter trades for current wallet only
+                        const myTrades = data.trades.filter((t: any) => 
+                            t.follower === currentAccount.address
+                        );
+                        
+                        const trades = myTrades.map((t: any) => ({
                             trader: t.trader.slice(0, 6) + '...' + t.trader.slice(-4),
                             asset: t.asset,
                             action: t.action,
@@ -94,7 +165,7 @@ export default function CopyTradingPage() {
                             success: t.success
                         }));
                         setCopiedTrades(trades);
-                        console.log('✅ Loaded', trades.length, 'trade(s)');
+                        console.log(`✅ Loaded ${trades.length} trade(s) for wallet ${currentAccount.address.slice(0, 8)}...`);
                     } else {
                         setCopiedTrades([]);
                     }
@@ -114,74 +185,64 @@ export default function CopyTradingPage() {
         // Refresh history every 10 seconds
         const interval = setInterval(loadTradeHistory, 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [currentAccount?.address]);
     
-    // Handle follow/unfollow
+    // Handle follow/unfollow via smart contract
     const handleFollowToggle = async (address: string) => {
+        if (!currentAccount?.address) {
+            alert('Please connect your wallet first');
+            return;
+        }
+        
         console.log('🔘 Follow button clicked for:', address);
         setIsFollowing(address);
         
         const wasFollowing = followedTraders.has(address);
         console.log(`📊 Current state: ${wasFollowing ? 'Following' : 'Not following'}`);
         
-        // Optimistically update UI
-        setFollowedTraders(prev => {
-            const newSet = new Set(prev);
-            if (wasFollowing) {
-                newSet.delete(address);
-                console.log('➖ Unfollowing trader');
-            } else {
-                newSet.add(address);
-                console.log('➕ Following trader');
-            }
-            return newSet;
-        });
-        
-        // Sync to agent via API
         try {
-            const endpoint = wasFollowing ? 'remove' : 'add';
-            console.log(`📡 Calling API: POST /api/followed-traders/${endpoint}`);
+            // Build transaction
+            const tx = wasFollowing ? buildUnfollowTraderTx(address) : buildFollowTraderTx(address);
             
-            const response = await fetch(`http://localhost:3002/api/followed-traders/${endpoint}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ address }),
-            });
+            console.log(`📝 Submitting ${wasFollowing ? 'unfollow' : 'follow'} transaction to blockchain...`);
             
-            console.log(`📥 API response status: ${response.status}`);
-            
-            if (response.ok) {
-                const result = await response.json();
-                console.log(`✅ Auto-synced to agent:`, result);
-                
-                // Show success notification (optional)
-                if (!wasFollowing) {
-                    console.log(`🤖 Agent now monitoring: ${address.slice(0, 16)}...`);
+            // Execute transaction
+            signAndExecute(
+                { transaction: tx },
+                {
+                    onSuccess: (result) => {
+                        console.log('✅ Transaction successful:', result.digest);
+                        
+                        // Update UI
+                        setFollowedTraders(prev => {
+                            const newSet = new Set(prev);
+                            if (wasFollowing) {
+                                newSet.delete(address);
+                                console.log('➖ Unfollowed trader on-chain');
+                            } else {
+                                newSet.add(address);
+                                console.log('➕ Followed trader on-chain');
+                            }
+                            return newSet;
+                        });
+                        
+                        // The agent will automatically pick this up from the smart contract events!
+                        console.log('🤖 Agent will automatically detect this change from the smart contract');
+                        
+                        setIsFollowing(null);
+                    },
+                    onError: (error) => {
+                        console.error('❌ Transaction failed:', error);
+                        alert(`Failed to ${wasFollowing ? 'unfollow' : 'follow'} trader: ${error.message}`);
+                        setIsFollowing(null);
+                    },
                 }
-            } else {
-                const errorText = await response.text();
-                console.error('❌ Failed to sync to agent:', errorText);
-                // Revert optimistic update on failure
-                setFollowedTraders(prev => {
-                    const newSet = new Set(prev);
-                    if (wasFollowing) {
-                        newSet.add(address);
-                    } else {
-                        newSet.delete(address);
-                    }
-                    return newSet;
-                });
-            }
+            );
         } catch (error) {
-            console.error('❌ Error syncing to agent:', error);
-            console.warn('⚠️ Make sure API server is running: cd agent && node api-server.js');
-            // Keep the UI update even if sync fails - user can manually sync later
+            console.error('Error building transaction:', error);
+            alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setIsFollowing(null);
         }
-        
-        setIsFollowing(null);
-        console.log('✅ Follow toggle complete');
     };
     
     // Add custom trader from search
@@ -294,24 +355,6 @@ export default function CopyTradingPage() {
         }
     };
     
-    // Save followed traders to a file that the agent can read
-    const saveFollowedTradersForAgent = async (addresses: string[]) => {
-        try {
-            const data = {
-                followedTraders: addresses,
-                timestamp: new Date().toISOString()
-            };
-            
-            // Use localStorage as a bridge (in production, use an API)
-            localStorage.setItem('agentFollowedTraders', JSON.stringify(data));
-            
-            console.log('✅ Saved followed traders for agent:', addresses);
-            console.log('📋 Copy this to /agent/followed_traders.json:', JSON.stringify(data, null, 2));
-        } catch (error) {
-            console.error('Failed to save traders for agent:', error);
-        }
-    };
-    
     // Export followed traders for agent
     const handleExportForAgent = () => {
         const data = {
@@ -335,7 +378,6 @@ export default function CopyTradingPage() {
     
     // Filter traders based on search and following status
     const filteredTraders = traders.filter(trader => {
-        const isFollowingTrader = followedTraders.has(trader.address);
         const matchesSearch = trader.address.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesSearch;
     }).map(trader => ({
@@ -343,10 +385,30 @@ export default function CopyTradingPage() {
         isFollowing: followedTraders.has(trader.address)
     }));
     
-    const followingTraders = traders.filter(t => followedTraders.has(t.address)).map(trader => ({
-        ...trader,
-        isFollowing: true
-    }));
+    // Build followingTraders list - includes both known traders and followed addresses not in traders list
+    const followingTraders = (() => {
+        const result: Trader[] = [];
+        
+        // Add known traders that are being followed
+        traders.filter(t => followedTraders.has(t.address)).forEach(trader => {
+            result.push({ ...trader, isFollowing: true });
+        });
+        
+        // Add followed addresses that aren't in the traders list
+        followedTraders.forEach(address => {
+            if (!traders.some(t => t.address === address)) {
+                result.push({
+                    address,
+                    followers: 0,
+                    totalTrades: 0,
+                    profitLoss: "Following",
+                    isFollowing: true
+                });
+            }
+        });
+        
+        return result;
+    })();
 
     const formatAddress = (addr: string) => {
         return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -421,6 +483,28 @@ export default function CopyTradingPage() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
+                {/* Migration Banner */}
+                {showMigrationBanner && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 text-blue-600">ℹ️</div>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-blue-900 mb-1">Local Follows Detected</h3>
+                                <p className="text-sm text-blue-800 mb-2">
+                                    Your follows from before are still here! To make them permanent and enable the agent to monitor them,
+                                    please click "Follow" on each trader again to save them to the blockchain.
+                                </p>
+                                <button
+                                    onClick={() => setShowMigrationBanner(false)}
+                                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'traders' && (
                     <div className="space-y-4">
                         {/* Search Bar */}
@@ -453,11 +537,6 @@ export default function CopyTradingPage() {
                                 <p className="text-muted-foreground mb-4">
                                     Paste a Sui wallet address above to get started
                                 </p>
-                                <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded max-w-md mx-auto">
-                                    <p className="font-mono text-xs">
-                                        Example: 0xe39edd65db983010aabd984c00d3912fa53f4aaa200c464d2649ced240df841d
-                                    </p>
-                                </div>
                             </div>
                         )}
                         
@@ -668,9 +747,6 @@ export default function CopyTradingPage() {
                                         <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
                                         <p>No copied trades yet</p>
                                         <p className="text-sm mt-1">Agent will detect and show trades here</p>
-                                        <p className="text-xs mt-2 text-gray-500">
-                                            💡 Make sure API server and agent are running
-                                        </p>
                                     </div>
                                 )}
                             </div>

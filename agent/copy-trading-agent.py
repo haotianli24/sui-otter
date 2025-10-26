@@ -17,6 +17,9 @@ from uagents.setup import fund_agent_if_low
 # Sui imports
 import requests
 
+# Import contract querier
+from contract_queries import ContractQuerier
+
 # Load environment variables
 load_dotenv()
 
@@ -40,6 +43,13 @@ fund_agent_if_low(agent.wallet.address())
 
 print(f"🤖 Copy Trading Agent Address: {agent.address}")
 print(f"💼 Agent Wallet: {agent.wallet.address()}")
+
+# Initialize contract querier
+contract_querier = ContractQuerier(
+    rpc_url=SUI_RPC_URL,
+    registry_id=COPY_TRADING_REGISTRY_ID,
+    package_id=COPY_TRADING_PACKAGE_ID
+)
 
 
 # Data Models
@@ -184,26 +194,56 @@ async def analyze_trade(tx: Dict) -> Optional[TradeDetected]:
 async def execute_copy_trade(follower: str, trade: TradeDetected) -> TradeCopied:
     """Execute a copy trade for a follower"""
     try:
-        # In a real implementation, this would:
-        # 1. Query the follower's copy settings from the smart contract
-        # 2. Calculate the appropriate copy amount based on settings
-        # 3. Execute the trade on the DEX
-        # 4. Call the smart contract's execute_copy_trade function
-        
-        # For now, we'll simulate the copy trade
         print(f"📋 Copying trade for {follower[:8]}...")
         print(f"   Trader: {trade.trader[:8]}...")
         print(f"   Action: {trade.action}")
         print(f"   Asset: {trade.asset}")
         print(f"   Amount: {trade.amount}")
         
-        # Simulate success
+        # 1. Query the follower's copy settings from the smart contract
+        settings = contract_querier.get_follower_settings(follower, trade.trader)
+        
+        if not settings:
+            print(f"   ⚠️  No settings found for this follower->trader relationship")
+            return TradeCopied(
+                follower=follower,
+                trader=trade.trader,
+                amount="0",
+                success=False,
+                error="No settings found"
+            )
+        
+        if not settings.get('auto_copy_enabled', True):
+            print(f"   ⏸️  Auto-copy disabled for this follower")
+            return TradeCopied(
+                follower=follower,
+                trader=trade.trader,
+                amount="0",
+                success=False,
+                error="Auto-copy disabled"
+            )
+        
+        # 2. Calculate the appropriate copy amount based on settings
+        original_amount = int(trade.amount)
+        copy_percentage = settings.get('copy_percentage', 10)
+        max_trade_size = settings.get('max_trade_size', 100000000)
+        
+        copy_amount = (original_amount * copy_percentage) // 100
+        copy_amount = min(copy_amount, max_trade_size)
+        
+        print(f"   💰 Copy amount: {copy_amount} MIST ({copy_amount/1_000_000_000:.6f} SUI)")
+        print(f"   📊 Settings: {copy_percentage}% of trade, max {max_trade_size/1_000_000_000:.2f} SUI")
+        
+        # 3. Execute the trade (simulated for now)
+        # In production, this would call execute_sui_transfer or execute_dex_swap
         await asyncio.sleep(0.5)  # Simulate blockchain transaction
+        
+        # 4. Record in smart contract (would be done in real implementation)
         
         return TradeCopied(
             follower=follower,
             trader=trade.trader,
-            amount=trade.amount,
+            amount=str(copy_amount),
             success=True,
             tx_digest=f"0x{'0'*60}{follower[-4:]}"  # Mock tx digest
         )
@@ -217,22 +257,18 @@ async def execute_copy_trade(follower: str, trade: TradeDetected) -> TradeCopied
         )
 
 
-# Load followed traders from file
-def load_followed_traders():
-    """Load followed traders from JSON file"""
+# Load followed traders from smart contract
+def load_trader_to_followers_map() -> Dict[str, List[str]]:
+    """
+    Load trader->followers mapping from smart contract
+    Returns: {"0xTrader1": ["0xUserA", "0xUserB"], ...}
+    """
     try:
-        import os
-        file_path = os.path.join(os.path.dirname(__file__), 'followed_traders.json')
-        
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-                return data.get('followedTraders', [])
+        trader_map = contract_querier.get_trader_to_followers_map()
+        return trader_map
     except Exception as e:
-        print(f"⚠️ Could not load followed traders: {e}")
-    
-    # No fallback - only monitor traders explicitly added by user
-    return []
+        print(f"⚠️ Could not load followers from contract: {e}")
+        return {}
 
 
 # Save trade history to file for UI to read
@@ -265,15 +301,17 @@ async def startup(ctx: Context):
     ctx.logger.info(f"   Agent Address: {agent.address}")
     ctx.logger.info(f"   Polling Interval: {POLLING_INTERVAL}s")
     ctx.logger.info(f"   SUI RPC: {SUI_RPC_URL}")
+    ctx.logger.info(f"   📜 Contract Registry: {COPY_TRADING_REGISTRY_ID[:16]}...")
     
-    # Load traders from file (updated by webapp)
-    followed_traders = load_followed_traders()
+    # Load trader->followers mapping from smart contract
+    trader_map = load_trader_to_followers_map()
     
-    ctx.logger.info(f"   📂 Loaded {len(followed_traders)} traders from file")
+    ctx.logger.info(f"   📊 Loaded {len(trader_map)} traders from smart contract")
     
-    for trader in followed_traders:
-        state.add_follower(trader, "0xuser_follower")
-        ctx.logger.info(f"   📊 Monitoring trader: {trader[:16]}...")
+    for trader, followers in trader_map.items():
+        for follower in followers:
+            state.add_follower(trader, follower)
+        ctx.logger.info(f"   📊 Monitoring trader: {trader[:16]}... ({len(followers)} follower(s))")
     
     ctx.storage.set("initialized", True)
 
@@ -284,22 +322,22 @@ async def monitor_trades(ctx: Context):
     if not ctx.storage.get("initialized"):
         return
     
-    # Periodically reload followed traders from file (every scan)
-    followed_traders = load_followed_traders()
+    # Periodically reload trader->followers mapping from smart contract (every scan)
+    trader_map = load_trader_to_followers_map()
     
-    # Update monitored traders if file changed
-    for trader_addr in followed_traders:
-        if trader_addr not in state.monitored_traders:
-            state.add_follower(trader_addr, "0xuser_follower")
-            ctx.logger.info(f"   ➕ Now monitoring new trader: {trader_addr[:16]}...")
+    # Clear current state and rebuild from contract
+    state.monitored_traders.clear()
     
-    # Remove traders no longer in file
-    for trader_addr in list(state.monitored_traders.keys()):
-        if trader_addr not in followed_traders:
-            del state.monitored_traders[trader_addr]
-            ctx.logger.info(f"   ➖ Stopped monitoring trader: {trader_addr[:16]}...")
+    # Rebuild the mapping
+    for trader, followers in trader_map.items():
+        for follower in followers:
+            state.add_follower(trader, follower)
     
-    ctx.logger.info("👁️  Scanning for new trades...")
+    if not state.monitored_traders:
+        ctx.logger.info("⏸️  No traders being followed. Waiting...")
+        return
+    
+    ctx.logger.info(f"👁️  Scanning for new trades from {len(state.monitored_traders)} trader(s)...")
     
     for trader, followers in state.monitored_traders.items():
         if not followers:

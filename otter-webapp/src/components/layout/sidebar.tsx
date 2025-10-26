@@ -33,7 +33,7 @@ const navItems = [
         icon: Waves,
     },
     {
-        name: "Copy Trading",
+        name: "Agents",
         href: "/copy-trading",
         icon: TrendingUp,
     },
