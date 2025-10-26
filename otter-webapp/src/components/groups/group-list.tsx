@@ -2,9 +2,32 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Conversation } from "@/lib/mock-data";
 import { formatDistanceToNow } from "@/lib/format-date";
 import { Users as UsersIcon } from "lucide-react";
+
+interface User {
+  id: string;
+  name: string;
+  address: string;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  sender: string;
+  timestamp: number;
+  channelId: string;
+}
+
+interface Conversation {
+  id: string;
+  type: "direct" | "group";
+  name?: string;
+  participants: User[];
+  lastMessage?: Message;
+  unreadCount: number;
+  avatar?: string;
+}
 
 interface GroupListProps {
   groups: Conversation[];

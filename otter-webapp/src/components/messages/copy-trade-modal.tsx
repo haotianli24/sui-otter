@@ -10,13 +10,19 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Message } from "@/lib/mock-data";
 import { TrendingUp, AlertCircle } from "lucide-react";
+
+interface TradeData {
+    action: "buy" | "sell";
+    token: string;
+    amount: string;
+    price: string;
+}
 
 interface CopyTradeModalProps {
     isOpen: boolean;
     onClose: () => void;
-    trade: Message["tradeData"];
+    trade: TradeData;
 }
 
 export function CopyTradeModal({ isOpen, onClose, trade }: CopyTradeModalProps) {

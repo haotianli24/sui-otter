@@ -24,6 +24,7 @@ interface ActivityListProps {
     onRefresh: () => void;
     onLoadMore: () => void;
     onViewDetails?: (digest: string) => void;
+    currentUserAddress?: string;
 }
 
 export function ActivityList({
@@ -33,7 +34,8 @@ export function ActivityList({
     hasMore,
     onRefresh,
     onLoadMore,
-    onViewDetails
+    onViewDetails,
+    currentUserAddress
 }: ActivityListProps) {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -106,6 +108,7 @@ export function ActivityList({
                         operationsCount={activity.operationsCount}
                         participants={activity.participants}
                         onViewDetails={onViewDetails}
+                        currentUserAddress={currentUserAddress}
                     />
                 ))}
             </div>

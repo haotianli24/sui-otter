@@ -45,7 +45,13 @@ export function clearTransactionCache(): void {
                 localStorage.removeItem(key);
             }
         });
+        console.log('Transaction cache cleared');
     } catch (error) {
         console.error('Error clearing cache:', error);
     }
+}
+
+// Clear cache on page load to force fresh data
+if (typeof window !== 'undefined') {
+    clearTransactionCache();
 }

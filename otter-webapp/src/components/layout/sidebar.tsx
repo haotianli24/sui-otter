@@ -13,7 +13,6 @@ import {
     Menu,
     X,
     Waves,
-    TrendingUp,
     Bot,
 } from "lucide-react";
 import SuiLogo from "/sui-sui-logo.svg";

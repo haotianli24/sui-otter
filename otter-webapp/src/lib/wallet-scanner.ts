@@ -24,13 +24,13 @@ export async function scanNFTs(address: string, suiClient: SuiClient): Promise<n
       },
       limit: 50,
     });
-    
+
     // Filter for NFTs (objects with display/image metadata)
     const nfts = objects.data.filter(obj => {
       const type = obj.data?.type;
       return type && !type.includes('::coin::Coin');
     });
-    
+
     return nfts.length;
   } catch (error) {
     console.error('Error scanning NFTs:', error);
@@ -46,7 +46,7 @@ export async function scanTransactions(address: string, suiClient: SuiClient): P
       },
       limit: 50,
     });
-    
+
     return result.data.length;
   } catch (error) {
     console.error('Error scanning transactions:', error);
@@ -66,14 +66,14 @@ export async function detectDeFiProtocols(address: string, suiClient: SuiClient)
       },
       limit: 50,
     });
-    
+
     const protocols = new Set<string>();
-    
+
     transactions.data.forEach(tx => {
       const txData = tx.transaction?.data;
       if (txData && 'transaction' in txData) {
         const packageId = String(txData);
-        
+
         // Check if transaction interacted with known protocols
         Object.entries(KNOWN_PROTOCOLS).forEach(([protocol, id]) => {
           if (packageId.includes(id)) {
@@ -82,7 +82,7 @@ export async function detectDeFiProtocols(address: string, suiClient: SuiClient)
         });
       }
     });
-    
+
     return Array.from(protocols);
   } catch (error) {
     console.error('Error detecting DeFi protocols:', error);
@@ -91,10 +91,10 @@ export async function detectDeFiProtocols(address: string, suiClient: SuiClient)
 }
 
 export function generatePersonalitySummary(data: WalletScanResult): string {
-  const { nftCount, transactionCount, defiProtocols, activityLevel } = data;
-  
+  const { nftCount, defiProtocols, activityLevel } = data;
+
   const parts: string[] = [];
-  
+
   // Activity level
   if (activityLevel === 'advanced') {
     parts.push('an active and experienced Sui user');
@@ -103,21 +103,21 @@ export function generatePersonalitySummary(data: WalletScanResult): string {
   } else {
     parts.push('exploring the Sui ecosystem');
   }
-  
+
   // NFT interest
   if (nftCount > 5) {
     parts.push('passionate about NFTs');
   } else if (nftCount > 0) {
     parts.push('interested in digital collectibles');
   }
-  
+
   // DeFi engagement
   if (defiProtocols.length > 2) {
     parts.push(`actively trading on ${defiProtocols.join(', ')}`);
   } else if (defiProtocols.length > 0) {
     parts.push(`exploring DeFi on ${defiProtocols.join(', ')}`);
   }
-  
+
   return parts.join(', ');
 }
 
@@ -127,7 +127,7 @@ export async function scanWallet(address: string, suiClient: SuiClient): Promise
     scanTransactions(address, suiClient),
     detectDeFiProtocols(address, suiClient),
   ]);
-  
+
   // Determine activity level
   let activityLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
   if (transactionCount > 50 || defiProtocols.length > 2) {
@@ -135,7 +135,7 @@ export async function scanWallet(address: string, suiClient: SuiClient): Promise
   } else if (transactionCount > 10 || defiProtocols.length > 0) {
     activityLevel = 'intermediate';
   }
-  
+
   return {
     nftCount,
     transactionCount,

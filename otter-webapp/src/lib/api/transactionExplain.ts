@@ -1,5 +1,3 @@
-import { generateTransactionExplanation } from "../gemini-service";
-
 export interface TransactionExplainRequest {
     digest: string;
     txData: any;
@@ -7,6 +5,7 @@ export interface TransactionExplainRequest {
         senderName: string;
         isCurrentUser: boolean;
         groupName?: string;
+        currentUserAddress?: string;
     };
 }
 
@@ -19,23 +18,29 @@ export interface TransactionExplainResponse {
 
 export async function explainTransaction(
     digest: string,
-    txData: any,
     context?: TransactionExplainRequest['context']
 ): Promise<TransactionExplainResponse | null> {
     try {
-        if (!digest || !txData) {
-            throw new Error("Transaction digest and data are required");
+        if (!digest) {
+            throw new Error("Transaction digest is required");
         }
 
-        // Generate AI explanation with context
-        const explanation = await generateTransactionExplanation(txData, context);
+        // Call the API endpoint that fetches real transaction data
+        const response = await fetch("/api/transaction-explain", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                digest,
+                context
+            }),
+        });
 
-        return {
-            explanation,
-            digest,
-            cached: false,
-            timestamp: new Date().toISOString(),
-        };
+        if (!response.ok) {
+            throw new Error("Failed to generate explanation");
+        }
+
+        const data = await response.json();
+        return data;
     } catch (error) {
         console.error("Error generating explanation:", error);
         return null;

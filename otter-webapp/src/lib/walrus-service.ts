@@ -225,11 +225,11 @@ export async function getFileUrl(blobId: string): Promise<string> {
     // Try Walruscan testnet first (the real explorer)
     try {
         console.log(`[WalrusService] Fetching file from Walruscan: ${blobId}`);
-        
+
         // Try Walruscan testnet blob URL
         const walruscanUrl = `https://walruscan.com/testnet/blob/${blobId}`;
         const response = await fetch(walruscanUrl, { method: 'HEAD' });
-        
+
         if (response.ok) {
             console.log(`[WalrusService] File found on Walruscan: ${walruscanUrl}`);
             return walruscanUrl;
@@ -271,6 +271,7 @@ export function storeFallbackFile(blobId: string, file: File, url: string, messa
         category: getFileCategory(file.type),
         filename: file.name,
         size: file.size,
+        mimeType: file.type,
     };
 
     const fallbackData = {

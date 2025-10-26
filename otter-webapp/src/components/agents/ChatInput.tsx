@@ -54,7 +54,7 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask about Sui blockchain... (Shift+Enter for new line)"
-          className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-background border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-primary text-primary-foreground placeholder:text-primary-foreground/70 border border-primary/20 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
           rows={1}
           disabled={disabled}
         />

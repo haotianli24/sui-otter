@@ -2,8 +2,31 @@
 
 import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { cn } from "@/lib/utils";
-import { Conversation } from "@/lib/mock-data";
 import { formatDistanceToNow } from "@/lib/format-date";
+
+interface User {
+    id: string;
+    name: string;
+    address: string;
+}
+
+interface Message {
+    id: string;
+    content: string;
+    sender: string;
+    timestamp: number;
+    channelId: string;
+}
+
+interface Conversation {
+    id: string;
+    type: "direct" | "group";
+    name?: string;
+    participants: User[];
+    lastMessage?: Message;
+    unreadCount: number;
+    avatar?: string;
+}
 
 interface ConversationListProps {
     conversations: Conversation[];
@@ -37,13 +60,13 @@ export function ConversationList({
                                     "border border-transparent hover:border-border/50 hover:shadow-sm hover:bg-muted/30",
                                     "hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary/20",
                                     !isLast && "border-b border-border/20",
-                                    isSelected 
-                                        ? "bg-primary/10 border-primary/30 shadow-md ring-1 ring-primary/20 scale-[1.01] rounded-xl" 
+                                    isSelected
+                                        ? "bg-primary/10 border-primary/30 shadow-md ring-1 ring-primary/20 scale-[1.01] rounded-xl"
                                         : "rounded-xl"
                                 )}
                             >
                                 <div className="relative">
-                                    <GradientAvatar 
+                                    <GradientAvatar
                                         address={otherUser.address}
                                         size="md"
                                         className={cn(

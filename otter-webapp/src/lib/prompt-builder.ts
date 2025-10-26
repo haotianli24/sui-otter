@@ -21,17 +21,17 @@ PERSONALITY:
   // Add wallet activity context
   if (walletActivity) {
     prompt += `\n\nON-CHAIN ACTIVITY:`;
-    
+
     if (walletActivity.nft_count > 0) {
       prompt += `\n- Owns ${walletActivity.nft_count} NFTs`;
     }
-    
+
     if (walletActivity.transaction_count > 0) {
-      const level = walletActivity.transaction_count > 50 ? 'very active' : 
-                    walletActivity.transaction_count > 10 ? 'active' : 'new';
+      const level = walletActivity.transaction_count > 50 ? 'very active' :
+        walletActivity.transaction_count > 10 ? 'active' : 'new';
       prompt += `\n- ${level} on Sui (${walletActivity.transaction_count} transactions)`;
     }
-    
+
     if (walletActivity.defi_protocols.length > 0) {
       prompt += `\n- Uses DeFi: ${walletActivity.defi_protocols.join(', ')}`;
     }
@@ -40,10 +40,10 @@ PERSONALITY:
   // Add learned preferences from recent conversations
   if (recentMemories.length > 0) {
     const insights: string[] = [];
-    
+
     recentMemories.forEach(memory => {
       if (memory.learned_insights && Object.keys(memory.learned_insights).length > 0) {
-        Object.entries(memory.learned_insights).forEach(([key, value]) => {
+        Object.entries(memory.learned_insights).forEach(([, value]) => {
           if (value && typeof value === 'string') {
             insights.push(value);
           }
@@ -73,7 +73,7 @@ PERSONALITY:
 
 export function extractInsights(messages: { role: string; content: string }[]): Record<string, any> {
   const insights: Record<string, any> = {};
-  
+
   // Look for preference keywords
   const preferencePatterns = [
     { pattern: /I (like|love|enjoy|prefer|am interested in) (.+?)(\.|$|,)/gi, type: 'like' },

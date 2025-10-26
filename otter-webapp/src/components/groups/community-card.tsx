@@ -2,9 +2,31 @@
 
 import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { Button } from "@/components/ui/button";
-import { Community } from "@/lib/mock-data";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Users, Lock, Coins, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface Community {
+  id: string;
+  name: string;
+  description: string;
+  avatar: string;
+  owner: {
+    id: string;
+    name: string;
+    address: string;
+  };
+  memberCount: number;
+  type: "paid" | "free" | "token-gated";
+  price?: string;
+  tokenRequired?: {
+    symbol: string;
+    amount: string;
+  };
+  isJoined?: boolean;
+  trending?: boolean;
+  priceChange?: number;
+}
 
 interface CommunityCardProps {
   community: Community;
@@ -71,7 +93,7 @@ export function CommunityCard({ community, onJoin }: CommunityCardProps) {
       {/* Owner */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <GradientAvatar 
+          <GradientAvatar
             address={community.owner.address}
             size="sm"
             className="h-6 w-6"
@@ -98,8 +120,8 @@ export function CommunityCard({ community, onJoin }: CommunityCardProps) {
         {community.type === "free"
           ? "Join Free"
           : community.type === "paid"
-          ? "Subscribe"
-          : "Join with Token"}
+            ? "Subscribe"
+            : "Join with Token"}
       </Button>
     </div>
   );

@@ -253,9 +253,9 @@ export function useCommunityMembers(communityId: string) {
           });
 
           if (registryObject.data?.content && 'fields' in registryObject.data.content) {
-            const registryFields = registryObject.data.content.fields as any;
-            const membersTable = registryFields.members;
-            
+            // const registryFields = registryObject.data.content.fields as any;
+            // const membersTable = registryFields.members;
+
             // Try to get members for this community from the registry
             // Note: This might not work directly as we need to query the table
           }
@@ -318,7 +318,7 @@ export function useCommunityMembers(communityId: string) {
             if (messageResult.data?.objects?.nodes) {
               const messageNodes = messageResult.data.objects.nodes as any[];
               const uniqueSenders = new Set<string>();
-              
+
               messageNodes.forEach((node) => {
                 const fields = node.asMoveObject?.contents?.json;
                 if (fields && fields.community_id === communityId) {

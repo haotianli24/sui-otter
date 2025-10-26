@@ -1,5 +1,9 @@
 import http from 'http';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const PORT = 3001;
 const client = new SuiClient({ url: getFullnodeUrl('testnet') });
@@ -146,97 +150,101 @@ async function handleRequest(req, res) {
             }
 
             if (pathname === '/api/address-activity' && req.method === 'POST') {
-                const { address, limit = 50, cursor } = JSON.parse(body);
+                try {
+                    const { address, limit = 50, cursor } = JSON.parse(body);
 
-                if (!address) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Address is required' }));
-                    return;
-                }
-
-                if (!address.startsWith('0x') || address.length !== 66) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Invalid address format' }));
-                    return;
-                }
-
-                const [outgoingTxs, incomingTxs] = await Promise.all([
-                    client.queryTransactionBlocks({
-                        filter: { FromAddress: address },
-                        options: {
-                            showInput: true,
-                            showEffects: true,
-                            showEvents: true,
-                            showObjectChanges: true,
-                            showBalanceChanges: true,
-                        },
-                        limit: Math.ceil(limit / 2),
-                        order: 'descending',
-                        cursor: cursor,
-                    }),
-                    client.queryTransactionBlocks({
-                        filter: { ToAddress: address },
-                        options: {
-                            showInput: true,
-                            showEffects: true,
-                            showEvents: true,
-                            showObjectChanges: true,
-                            showBalanceChanges: true,
-                        },
-                        limit: Math.ceil(limit / 2),
-                        order: 'descending',
-                        cursor: cursor,
-                    })
-                ]);
-
-                const allTxs = [
-                    ...outgoingTxs.data.map(tx => ({ ...tx, type: 'outgoing' })),
-                    ...incomingTxs.data.map(tx => ({ ...tx, type: 'incoming' }))
-                ].sort((a, b) => {
-                    const timestampA = new Date(a.timestampMs || 0).getTime();
-                    const timestampB = new Date(b.timestampMs || 0).getTime();
-                    return timestampB - timestampA;
-                }).slice(0, limit);
-
-                const activities = allTxs.map(tx => {
-                    const gasUsed = tx.effects?.gasUsed
-                        ? (Number(tx.effects.gasUsed.computationCost) + Number(tx.effects.gasUsed.storageCost) - Number(tx.effects.gasUsed.storageRebate)) / 1e9
-                        : 0;
-
-                    const participants = new Set();
-                    if (tx.transaction?.data?.sender) {
-                        participants.add(tx.transaction.data.sender);
+                    if (!address) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Address is required' }));
+                        return;
                     }
 
-                    if (tx.objectChanges) {
-                        tx.objectChanges.forEach(change => {
-                            if (change.owner?.AddressOwner) {
-                                participants.add(change.owner.AddressOwner);
-                            }
-                        });
+                    if (!address.startsWith('0x') || address.length !== 66) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Invalid address format' }));
+                        return;
                     }
 
-                    return {
-                        digest: tx.digest,
-                        timestamp: tx.timestampMs || new Date().toISOString(),
-                        sender: tx.transaction?.data?.sender || '',
-                        type: tx.type,
-                        gasUsed: gasUsed.toFixed(6),
-                        operationsCount: tx.objectChanges?.length || 0,
-                        participants: Array.from(participants)
-                    };
-                });
+                    const [outgoingTxs, incomingTxs] = await Promise.all([
+                        client.queryTransactionBlocks({
+                            filter: { FromAddress: address },
+                            options: {
+                                showInput: true,
+                                showEffects: true,
+                                showEvents: true,
+                                showObjectChanges: true,
+                                showBalanceChanges: true,
+                            },
+                            limit: Math.ceil(limit / 2),
+                            order: 'descending',
+                        }),
+                        client.queryTransactionBlocks({
+                            filter: { ToAddress: address },
+                            options: {
+                                showInput: true,
+                                showEffects: true,
+                                showEvents: true,
+                                showObjectChanges: true,
+                                showBalanceChanges: true,
+                            },
+                            limit: Math.ceil(limit / 2),
+                            order: 'descending',
+                        })
+                    ]);
 
-                const hasMore = allTxs.length === limit;
-                const nextCursor = hasMore ? allTxs[allTxs.length - 1]?.digest : undefined;
+                    const allTxs = [
+                        ...outgoingTxs.data.map(tx => ({ ...tx, type: 'outgoing' })),
+                        ...incomingTxs.data.map(tx => ({ ...tx, type: 'incoming' }))
+                    ].sort((a, b) => {
+                        const timestampA = new Date(a.timestampMs || 0).getTime();
+                        const timestampB = new Date(b.timestampMs || 0).getTime();
+                        return timestampB - timestampA;
+                    }).slice(0, limit);
 
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    activities,
-                    hasMore,
-                    nextCursor,
-                    totalCount: activities.length
-                }));
+                    const activities = allTxs.map(tx => {
+                        const gasUsed = tx.effects?.gasUsed
+                            ? (Number(tx.effects.gasUsed.computationCost) + Number(tx.effects.gasUsed.storageCost) - Number(tx.effects.gasUsed.storageRebate)) / 1e9
+                            : 0;
+
+                        const participants = new Set();
+                        if (tx.transaction?.data?.sender) {
+                            participants.add(tx.transaction.data.sender);
+                        }
+
+                        if (tx.objectChanges) {
+                            tx.objectChanges.forEach(change => {
+                                if (change.owner?.AddressOwner) {
+                                    participants.add(change.owner.AddressOwner);
+                                }
+                            });
+                        }
+
+                        return {
+                            digest: tx.digest,
+                            timestamp: tx.timestampMs || new Date().toISOString(),
+                            sender: tx.transaction?.data?.sender || '',
+                            type: tx.type,
+                            gasUsed: gasUsed.toFixed(6),
+                            operationsCount: tx.objectChanges?.length || 0,
+                            participants: Array.from(participants)
+                        };
+                    });
+
+                    const hasMore = allTxs.length === limit;
+                    const nextCursor = hasMore ? allTxs[allTxs.length - 1]?.digest : undefined;
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        activities,
+                        hasMore,
+                        nextCursor,
+                        totalCount: activities.length
+                    }));
+                } catch (error) {
+                    console.error('Error in address-activity:', error);
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Failed to fetch activities' }));
+                }
             } else if (pathname === '/api/transaction-explorer' && req.method === 'POST') {
                 const { digest } = JSON.parse(body);
 
@@ -289,15 +297,68 @@ async function handleRequest(req, res) {
                     cexName,
                 }));
             } else if (pathname === '/api/transaction-explain' && req.method === 'POST') {
-                const { digest, txData, context } = JSON.parse(body);
+                const { digest, context } = JSON.parse(body);
 
-                if (!digest || !txData) {
+                if (!digest) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Transaction digest and data are required' }));
+                    res.end(JSON.stringify({ error: 'Transaction digest is required' }));
                     return;
                 }
 
-                const explanation = generateSimpleExplanation(txData, context);
+                // Fetch real transaction data
+                const txData = await client.getTransactionBlock({
+                    digest,
+                    options: {
+                        showInput: true,
+                        showEffects: true,
+                        showEvents: true,
+                        showObjectChanges: true,
+                        showBalanceChanges: true,
+                    },
+                });
+
+                if (!txData) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Transaction not found' }));
+                    return;
+                }
+
+                // Parse transaction data
+                const operations = parseTransactionChanges(txData);
+                const moveCalls = extractMoveCalls(txData);
+                const participants = extractParticipants(txData, txData.effects);
+                const gasUsed = txData.effects?.gasUsed
+                    ? (Number(txData.effects.gasUsed.computationCost) || 0) + (Number(txData.effects.gasUsed.storageCost) || 0) - (Number(txData.effects.gasUsed.storageRebate) || 0)
+                    : 0;
+                const sender = txData.transaction?.data?.sender;
+                const protocolName = moveCalls.length > 0 ? resolveProtocolName(moveCalls[0].package) : undefined;
+                const validatorName = sender ? resolveValidatorName(sender) || undefined : undefined;
+                const cexName = sender ? resolveCexName(sender) || undefined : undefined;
+
+                // Call GEMINI API with real transaction data
+                const apiKey = process.env.GEMINI_API_KEY;
+                if (!apiKey) {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'GEMINI API key not configured' }));
+                    return;
+                }
+
+                const genAI = new GoogleGenerativeAI(apiKey);
+                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+                const prompt = `Explain this Sui transaction in 1-2 simple sentences. Be concise and clear:
+
+                Transaction: ${digest}
+                Gas: ${(gasUsed / 1e9).toFixed(6)} SUI
+                Operations: ${operations.map(op => `${op.type}: ${op.description}`).join(', ')}
+                ${moveCalls.length > 0 ? `Smart Contract: ${moveCalls[0].function}` : ''}
+                ${protocolName ? `Protocol: ${protocolName}` : ''}
+
+                Just explain what the user did in plain English.`;
+
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const explanation = response.text();
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
@@ -543,11 +604,140 @@ function extractParticipants(txData, effects) {
     return Array.from(participants);
 }
 
+// GEMINI API integration
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 6000; // 6 seconds between requests
+
+async function generateTransactionExplanation(txData, context) {
+    try {
+        // Check if we have API key
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            console.log("No Gemini API key, using fallback");
+            return generateSimpleExplanation(txData, context);
+        }
+
+        // Simple rate limiting
+        const now = Date.now();
+        if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
+            console.log("Rate limiting: using fallback explanation");
+            return generateSimpleExplanation(txData, context);
+        }
+        lastRequestTime = now;
+
+        // Build context-aware prompt
+        let contextInfo = "";
+        if (context) {
+            if (context.isCurrentUser) {
+                contextInfo = `This is YOUR transaction that you shared in ${context.groupName || 'the chat'}. `;
+            } else {
+                contextInfo = `${context.senderName} shared this transaction in ${context.groupName || 'the chat'}. `;
+            }
+        }
+
+        // Build personalized context for pronoun usage
+        let pronounContext = "";
+        if (context) {
+            // Check if any transaction participants match the current user's address
+            const isUserTransaction = context.isCurrentUser ||
+                (context.currentUserAddress && txData.participants.includes(context.currentUserAddress));
+
+            if (isUserTransaction) {
+                pronounContext = `IMPORTANT: This is the current user's transaction. When referring to the wallet/account that performed this transaction, use "you" and "your". For example: "You transferred tokens" or "Your wallet created a new object".`;
+            } else {
+                pronounContext = `IMPORTANT: This is ${context.senderName}'s transaction. When referring to the wallet/account that performed this transaction, use "${context.senderName}" or "they/their". For example: "${context.senderName} transferred tokens" or "Their wallet created a new object".`;
+            }
+        }
+
+        // Build protocol and address context
+        let protocolContext = "";
+        if (txData.protocolName) {
+            protocolContext += `- Protocol: ${txData.protocolName}\n`;
+        }
+        if (txData.validatorName) {
+            protocolContext += `- Validator: ${txData.validatorName}\n`;
+        }
+        if (txData.cexName) {
+            protocolContext += `- Exchange: ${txData.cexName}\n`;
+        }
+
+        // Call the actual Gemini API
+        try {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+            const prompt = `Given a Sui blockchain transaction digest, explain in simple, friendly language what this transaction entails. Include the following details:
+
+    The type of transaction (e.g., transfer, minting, object mutation)
+
+    The main objects involved and their roles
+
+    The outcome or effect of the transaction
+
+    Any relevant context needed for understanding
+
+    Use clear, non-technical language suitable for a general audience
+
+    Keep the explanation brief, no more than a few sentences
+
+Make it easy to understand for someone with no blockchain background.
+
+${pronounContext}
+
+${contextInfo}Transaction Details:
+- Hash: ${txData.digest}
+- Gas Used: ${txData.gasUsed} SUI
+- Participants: ${txData.participants.length} addresses
+
+Operations:
+${txData.operations.map(op => `- ${op.type}: ${op.description}${op.amount ? ` (${op.amount} ${op.asset || 'tokens'})` : ''}`).join('\n')}
+
+Move Calls:
+${txData.moveCalls.map(call => `- ${call.package}::${call.module}::${call.function}`).join('\n')}
+
+${protocolContext ? `Additional Context:\n${protocolContext}` : ''}`;
+
+            console.log("Calling Gemini API for transaction explanation...");
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const explanation = response.text();
+
+            console.log("Gemini API response received");
+            return explanation;
+        } catch (apiError) {
+            console.error("Gemini API call failed:", apiError);
+            console.log("Falling back to static explanation");
+            return generateSimpleExplanation(txData, context);
+        }
+    } catch (error) {
+        console.error("Error generating explanation:", error);
+        return generateSimpleExplanation(txData, context);
+    }
+}
+
 function generateSimpleExplanation(txData, context) {
     const operations = parseTransactionChanges(txData);
     const moveCalls = extractMoveCalls(txData);
 
-    let explanation = `Transaction by ${context?.senderName || 'Unknown'}:\n\n`;
+    // Use appropriate pronouns based on context
+    let pronoun = "User";
+    if (context) {
+        // Check if any transaction participants match the current user's address
+        const isUserTransaction = context.isCurrentUser ||
+            (context.currentUserAddress && txData.participants.includes(context.currentUserAddress));
+
+        if (isUserTransaction) {
+            pronoun = "You";
+        } else {
+            pronoun = context.senderName || "User";
+        }
+    }
+
+    // Determine if this is a user transaction
+    const isUserTransaction = context && (context.isCurrentUser ||
+        (context.currentUserAddress && txData.participants.includes(context.currentUserAddress)));
+
+    let explanation = `${pronoun} ${isUserTransaction ? 'executed' : 'executed'} a transaction:\n\n`;
 
     if (moveCalls.length > 0) {
         explanation += `**Smart Contract Calls:**\n`;

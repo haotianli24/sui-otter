@@ -48,19 +48,19 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     // Determine the other member (not the current user)
     const otherMember = React.useMemo(() => {
         if (!currentChannel || !currentAccount) return null;
-        
+
         // Try to get from member permissions (DecryptedChannelObject structure)
         if (currentChannel.auth?.member_permissions?.contents) {
             const member = currentChannel.auth.member_permissions.contents.find((perm: any) => perm.key !== currentAccount.address)?.key;
             if (member) return member;
         }
-        
+
         // Fallback: try to get from the first message sender who isn't the current user
         if (messages.length > 0) {
             const otherSender = messages.find(msg => msg.sender !== currentAccount.address)?.sender;
             if (otherSender) return otherSender;
         }
-        
+
         return null;
     }, [currentChannel, currentAccount, messages]);
 
@@ -322,18 +322,18 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
 
             {/* Message content */}
             <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                <div 
-                    className={`px-4 py-2 rounded-2xl backdrop-blur-md border ${
-                        isCurrentUser 
-                            ? "bg-primary/10 border-primary/30" 
+                <div
+                    className={`px-4 py-2 rounded-2xl backdrop-blur-md border ${isCurrentUser
+                            ? "bg-primary/10 border-primary/30"
                             : "bg-card/80 border-border/50"
-                    }`}
+                        }`}
                 >
                     <MessageWithMedia
                         content={message.text}
                         isOwn={isCurrentUser}
                         senderName={displayName}
                         groupName="Channel"
+                        currentUserAddress={currentAccount?.address}
                     />
                 </div>
                 <div className="flex items-center gap-2 mt-1">

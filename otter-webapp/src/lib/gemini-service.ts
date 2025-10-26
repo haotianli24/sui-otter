@@ -25,45 +25,14 @@ interface MessageContext {
     senderName: string;
     isCurrentUser: boolean;
     groupName?: string;
+    currentUserAddress?: string;
 }
 
 // Simple rate limiting
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 6000; // 6 seconds between requests
 
-// Simple price cache for SUI
-let suiPriceCache: { price: number; timestamp: number } | null = null;
-const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-async function getSUIPrice(): Promise<number | null> {
-    try {
-        // Check cache first
-        if (suiPriceCache && Date.now() - suiPriceCache.timestamp < PRICE_CACHE_DURATION) {
-            return suiPriceCache.price;
-        }
-
-        // Fetch from CoinGecko API
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=sui&vs_currencies=usd');
-        if (!response.ok) {
-            throw new Error('Failed to fetch price');
-        }
-
-        const data = await response.json();
-        const price = data.sui?.usd;
-        
-        if (price) {
-            suiPriceCache = { price, timestamp: Date.now() };
-            return price;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('Error fetching SUI price:', error);
-        return null;
-    }
-}
-
-async function generateFallbackExplanation(txData: TransactionData): Promise<string> {
+function generateFallbackExplanation(txData: TransactionData, context?: MessageContext): string {
     const operations = txData.operations || [];
     const moveCalls = txData.moveCalls || [];
 
@@ -76,31 +45,39 @@ async function generateFallbackExplanation(txData: TransactionData): Promise<str
     const createOps = operations.filter(op => op.type === 'create');
     const callOps = operations.filter(op => op.type === 'call');
 
-    // Determine main action
+    // Determine main action with appropriate pronouns
     let mainAction = "executed a transaction";
     let protocol = "Sui blockchain";
+    let pronoun = "User";
+
+    // Set appropriate pronoun based on context
+    if (context) {
+        // Check if any transaction participants match the current user's address
+        const isUserTransaction = context.isCurrentUser ||
+            (context.currentUserAddress && txData.participants.includes(context.currentUserAddress));
+
+        if (isUserTransaction) {
+            pronoun = "You";
+        } else {
+            pronoun = context.senderName || "User";
+        }
+    }
+
+    // Determine if this is a user transaction
+    const isUserTransaction = context && (context.isCurrentUser ||
+        (context.currentUserAddress && txData.participants.includes(context.currentUserAddress)));
 
     if (transferOps.length > 0) {
         const hasAmount = transferOps.some(op => op.amount);
         if (hasAmount) {
-            // Extract specific transfer amounts
-            const transferAmounts = transferOps
-                .filter(op => op.amount && op.asset)
-                .map(op => `${op.amount} ${op.asset}`)
-                .join(', ');
-            
-            if (transferAmounts) {
-                mainAction = `transferred ${transferAmounts}`;
-            } else {
-                mainAction = "transferred tokens";
-            }
+            mainAction = isUserTransaction ? "transferred tokens" : "transferred tokens";
         } else {
-            mainAction = "transferred objects";
+            mainAction = isUserTransaction ? "transferred objects" : "transferred objects";
         }
     } else if (createOps.length > 0) {
-        mainAction = "created new objects";
+        mainAction = isUserTransaction ? "created new objects" : "created new objects";
     } else if (callOps.length > 0) {
-        mainAction = "called smart contract functions";
+        mainAction = isUserTransaction ? "called smart contract functions" : "called smart contract functions";
     }
 
     // Try to identify protocol from move calls
@@ -124,91 +101,121 @@ async function generateFallbackExplanation(txData: TransactionData): Promise<str
     const gasAmount = parseFloat(txData.gasUsed);
     const gasText = gasAmount > 0.001 ? `${txData.gasUsed} SUI` : "minimal gas";
 
-    // Build a more detailed explanation for transfers
-    if (transferOps.length > 0 && transferOps.some(op => op.amount)) {
-        const transferOpsWithAmounts = transferOps.filter(op => op.amount && op.asset);
-        
-        if (transferOpsWithAmounts.length > 0) {
-            const transfer = transferOpsWithAmounts[0]; // Take the first transfer
-            const amount = transfer.amount;
-            const asset = transfer.asset;
-            const recipient = transfer.to;
-            
-            // Format recipient address (show first 6 and last 4 characters)
-            const recipientShort = recipient && typeof recipient === "string" 
-                ? `${recipient.slice(0, 6)}...${recipient.slice(-4)}` 
-                : "unknown address";
-            
-            // Get dollar value for SUI transfers
-            let dollarValue = "";
-            if (asset === "SUI" && amount) {
-                const suiPrice = await getSUIPrice();
-                if (suiPrice) {
-                    const dollarAmount = (parseFloat(amount) * suiPrice).toFixed(2);
-                    dollarValue = `$${dollarAmount}`;
-                }
-            }
-            
-            return `User transferred ${amount} ${asset}${dollarValue ? ` (${dollarValue})` : ''} to ${recipientShort}, paying ${gasText} in transaction fees. Transaction completed successfully.`;
-        }
-    }
-
-    return `User ${mainAction} on ${protocol}, paying ${gasText} in transaction fees. Transaction completed successfully.`;
+    return `${pronoun} ${mainAction} on ${protocol}, paying ${gasText} in transaction fees. Transaction completed successfully.`;
 }
 
 export async function generateTransactionExplanation(txData: TransactionData, _context?: MessageContext): Promise<string> {
-    try {
-        // Check if we have API key
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        if (!apiKey) {
-            console.log("No Gemini API key, using fallback");
-            return await generateFallbackExplanation(txData);
-        }
-
-        // Simple rate limiting
-        const now = Date.now();
-        if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
-            console.log("Rate limiting: using fallback explanation");
-            return await generateFallbackExplanation(txData);
-        }
-        lastRequestTime = now;
-
-        // Build context-aware prompt
-        // let contextInfo = "";
-        // if (context) {
-        //     if (context.isCurrentUser) {
-        //         contextInfo = `This is YOUR transaction that you shared in ${context.groupName || 'the chat'}. `;
-        //     } else {
-        //         contextInfo = `${context.senderName} shared this transaction in ${context.groupName || 'the chat'}. `;
-        //     }
-        // }
-
-        // Build protocol and address context
-        let protocolContext = "";
-        if (txData.protocolName) {
-            protocolContext += `- Protocol: ${txData.protocolName}\n`;
-        }
-        if (txData.validatorName) {
-            protocolContext += `- Validator: ${txData.validatorName}\n`;
-        }
-        if (txData.cexName) {
-            protocolContext += `- Exchange: ${txData.cexName}\n`;
-        }
-
-        // For now, use a simple fetch to a hypothetical API endpoint
-        // In a real implementation, you would call the Gemini API here
-        console.log("Gemini API integration not yet implemented, using fallback");
-        return await generateFallbackExplanation(txData);
-    } catch (error) {
-        console.error("Error generating explanation:", error);
-        return await generateFallbackExplanation(txData);
+    // Check if we have API key
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        return generateFallbackExplanation(txData, _context);
     }
+
+    // Simple rate limiting
+    const now = Date.now();
+    if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
+        throw new Error("Rate limited - please wait before requesting another explanation");
+    }
+    lastRequestTime = now;
+
+    // Build context-aware prompt
+    let contextInfo = "";
+    if (_context) {
+        if (_context.isCurrentUser) {
+            contextInfo = `This is YOUR transaction that you shared in ${_context.groupName || 'the chat'}. `;
+        } else {
+            contextInfo = `${_context.senderName} shared this transaction in ${_context.groupName || 'the chat'}. `;
+        }
+    }
+
+    // Build protocol and address context
+    let protocolContext = "";
+    if (txData.protocolName) {
+        protocolContext += `- Protocol: ${txData.protocolName}\n`;
+    }
+    if (txData.validatorName) {
+        protocolContext += `- Validator: ${txData.validatorName}\n`;
+    }
+    if (txData.cexName) {
+        protocolContext += `- Exchange: ${txData.cexName}\n`;
+    }
+
+    // Call the actual Gemini API
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    // Build personalized context for pronoun usage
+    let pronounContext = "";
+    if (_context) {
+        // Check if any transaction participants match the current user's address
+        const isUserTransaction = _context.isCurrentUser ||
+            (_context.currentUserAddress && txData.participants.includes(_context.currentUserAddress));
+
+        if (isUserTransaction) {
+            pronounContext = `IMPORTANT: This is the current user's transaction. When referring to the wallet/account that performed this transaction, use "you" and "your". For example: "You transferred tokens" or "Your wallet created a new object".`;
+        } else {
+            pronounContext = `IMPORTANT: This is ${_context.senderName}'s transaction. When referring to the wallet/account that performed this transaction, use "${_context.senderName}" or "they/their". For example: "${_context.senderName} transferred tokens" or "Their wallet created a new object".`;
+        }
+    }
+
+    const prompt = `Given a Sui blockchain transaction digest, explain in simple, friendly language what this transaction entails. Include the following details:
+
+    The type of transaction (e.g., transfer, minting, object mutation)
+
+    The main objects involved and their roles
+
+    The outcome or effect of the transaction
+
+    Any relevant context needed for understanding
+
+    Use clear, non-technical language suitable for a general audience
+
+    Keep the explanation brief, no more than a few sentences
+
+Make it easy to understand for someone with no blockchain background.
+
+${pronounContext}
+
+${contextInfo}Transaction Details:
+- Hash: ${txData.digest}
+- Gas Used: ${txData.gasUsed} SUI
+- Participants: ${txData.participants.length} addresses
+
+Operations:
+${txData.operations.map(op => `- ${op.type}: ${op.description}${op.amount ? ` (${op.amount} ${op.asset || 'tokens'})` : ''}`).join('\n')}
+
+Move Calls:
+${txData.moveCalls.map(call => `- ${call.package}::${call.module}::${call.function}`).join('\n')}
+
+${protocolContext ? `Additional Context:\n${protocolContext}` : ''}`;
+
+    console.log("Calling Gemini API for transaction explanation...");
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const explanation = response.text();
+
+    console.log("Gemini API response received");
+    return explanation;
 }
 
 export async function isGeminiAvailable(): Promise<boolean> {
     try {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        return !!apiKey;
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return false;
+        }
+
+        // Test with a simple API call
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        // Simple test prompt
+        const result = await model.generateContent("Test");
+        await result.response;
+
+        return true;
     } catch (error) {
         console.error("Gemini API not available:", error);
         return false;

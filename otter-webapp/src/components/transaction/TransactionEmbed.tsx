@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { AlertCircle, ExternalLink } from "lucide-react";
+import { AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCachedTransaction, setCachedTransaction } from "@/lib/transaction-cache";
-import { generateTransactionExplanation } from "@/lib/gemini-service";
+import { explainTransaction } from "@/lib/api/transactionExplain";
 import { getTransactionDetails } from "@/lib/api/transaction-explorer";
 
 interface TransactionEmbedProps {
@@ -14,6 +14,7 @@ interface TransactionEmbedProps {
     senderName?: string;
     isCurrentUser?: boolean;
     groupName?: string;
+    currentUserAddress?: string;
 }
 
 interface EmbedState {
@@ -21,6 +22,7 @@ interface EmbedState {
     error: string | null;
     data: any | null;
     explanation: string | null;
+    explanationLoading: boolean;
 }
 
 export default function TransactionEmbed({
@@ -28,13 +30,15 @@ export default function TransactionEmbed({
     onViewDetails,
     senderName,
     isCurrentUser,
-    groupName
+    groupName,
+    currentUserAddress
 }: TransactionEmbedProps) {
     const [state, setState] = useState<EmbedState>({
         loading: true,
         error: null,
         data: null,
         explanation: null,
+        explanationLoading: false,
     });
 
     const [copied, setCopied] = useState(false);
@@ -55,6 +59,7 @@ export default function TransactionEmbed({
                     error: null,
                     data: cached.txData,
                     explanation: cached.explanation,
+                    explanationLoading: false,
                 });
                 return;
             }
@@ -65,29 +70,47 @@ export default function TransactionEmbed({
                 throw new Error("Transaction not found");
             }
 
+            // Set transaction data first, then load AI explanation
+            setState(prev => ({
+                ...prev,
+                loading: false,
+                data: txData,
+                explanationLoading: true,
+            }));
+
             // Get AI explanation with context
             const context = {
                 senderName: senderName || "Unknown",
                 isCurrentUser: isCurrentUser || false,
-                groupName: groupName || "the chat"
+                groupName: groupName || "the chat",
+                currentUserAddress: currentUserAddress
             };
 
-            const explanation = await generateTransactionExplanation(txData, context);
+            try {
+                const explainResult = await explainTransaction(digest, context);
+                const explanation = explainResult?.explanation || "Failed to generate explanation";
 
-            // Cache the result
-            setCachedTransaction(digest, {
-                explanation,
-                txData,
-                timestamp: Date.now().toString(),
-                digest,
-            });
+                // Cache the result
+                setCachedTransaction(digest, {
+                    explanation,
+                    txData,
+                    timestamp: Date.now().toString(),
+                    digest,
+                });
 
-            setState({
-                loading: false,
-                error: null,
-                data: txData,
-                explanation,
-            });
+                setState(prev => ({
+                    ...prev,
+                    explanation,
+                    explanationLoading: false,
+                }));
+            } catch (explainError) {
+                console.error("Error generating AI explanation:", explainError);
+                setState(prev => ({
+                    ...prev,
+                    explanation: "Failed to generate AI explanation",
+                    explanationLoading: false,
+                }));
+            }
         } catch (error) {
             console.error("Error loading transaction:", error);
             setState({
@@ -95,6 +118,7 @@ export default function TransactionEmbed({
                 error: error instanceof Error ? error.message : "Failed to load transaction",
                 data: null,
                 explanation: null,
+                explanationLoading: false,
             });
         }
     };
@@ -190,14 +214,22 @@ export default function TransactionEmbed({
             <CardContent className="pt-0">
                 <div className="space-y-3">
                     {/* AI Summary - Show first and prominently */}
-                    {state.explanation && (
-                        <div className="bg-muted/50 p-3 rounded-lg border">
+                    {state.data && (
+                        <div className="bg-[#4DA2FF]/10 border border-[#4DA2FF]/20 p-3 rounded-lg">
                             <div className="flex items-start gap-2">
                                 <div className="text-lg">🤖</div>
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-foreground leading-relaxed">
-                                        {state.explanation}
-                                    </p>
+                                    <p className="text-sm font-medium text-[#4DA2FF] mb-1">AI Explanation</p>
+                                    {!state.explanation ? (
+                                        <div className="flex items-center gap-2 text-sm text-foreground">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Generating explanation...</span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-foreground leading-relaxed">
+                                            {state.explanation}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>

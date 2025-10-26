@@ -169,16 +169,16 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
                     className="hidden"
                 />
                 <div className="relative" ref={dropdownRef}>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="flex-shrink-0"
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="flex-shrink-0"
                         title="Add content"
                         onClick={handleDropdownToggle}
-                    disabled={disabled}
-                >
+                        disabled={disabled}
+                    >
                         <Plus className="h-5 w-5" />
-                </Button>
+                    </Button>
                     {showDropdown && (
                         <div className="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
                             <div className="py-1">
@@ -213,7 +213,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Type a message... (Shift+Enter for new line)"
-                    className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-white dark:bg-gray-900 border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-primary text-primary-foreground placeholder:text-primary-foreground/70 border border-primary/20 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     rows={1}
                     disabled={disabled}
                 />
@@ -230,7 +230,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
 
             {/* Send Crypto Modal */}
             {showCryptoModal && (
-                <SendCryptoModal 
+                <SendCryptoModal
                     onClose={() => setShowCryptoModal(false)}
                     onSend={(content) => {
                         onSend(content, undefined);
@@ -241,7 +241,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
 
             {/* Send Trade Modal */}
             {showTradeModal && (
-                <SendTradeModal 
+                <SendTradeModal
                     onClose={() => setShowTradeModal(false)}
                     onSend={(content) => {
                         onSend(content, undefined);
@@ -270,7 +270,7 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
 
     const handleSend = async () => {
         if (!recipient.trim() || !amount.trim() || !currentAccount) return;
-        
+
         setIsLoading(true);
         try {
             // Get the selected token metadata
@@ -282,10 +282,10 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
             // Convert amount to smallest unit
             const decimals = selectedCoin === 'SUI' ? 9 : 9; // Most tokens use 9 decimals
             const amountInSmallestUnit = Math.floor(parseFloat(amount) * Math.pow(10, decimals));
-            
+
             // Create transaction
             const tx = new Transaction();
-            
+
             if (selectedCoin === 'SUI') {
                 // Transfer SUI (split from gas)
                 tx.transferObjects(
@@ -298,11 +298,11 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                     owner: currentAccount.address,
                     coinType: selectedToken.coinType,
                 });
-                
+
                 if (coinObjects.data.length === 0) {
                     throw new Error(`No ${selectedCoin} coins found`);
                 }
-                
+
                 // Use the first coin object
                 const coinObject = coinObjects.data[0];
                 tx.transferObjects(
@@ -361,7 +361,7 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                         ×
                     </button>
                 </div>
-                
+
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium mb-2 block">Recipient</label>
@@ -373,15 +373,15 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                             className="w-full px-3 py-2 border border-input rounded-md bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                     </div>
-                    
+
                     <div>
                         <label className="text-sm font-medium mb-2 block">Coin</label>
                         <div className="relative">
                             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                                 {selectedCoinBalance ? (
-                                    <img 
-                                        src={selectedCoinBalance.icon} 
-                                        alt={selectedCoinBalance.symbol} 
+                                    <img
+                                        src={selectedCoinBalance.icon}
+                                        alt={selectedCoinBalance.symbol}
                                         className="w-5 h-5 rounded-full filter dark:brightness-0 dark:invert"
                                         onLoad={() => console.log('Image loaded successfully:', selectedCoinBalance?.icon)}
                                         onError={(e) => {
@@ -400,11 +400,11 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                                     </div>
                                 )}
                                 <span className="text-lg hidden">
-                                    {selectedCoinBalance?.symbol === 'SUI' ? '🟡' : 
-                                     selectedCoinBalance?.symbol === 'USDC' ? '💵' :
-                                     selectedCoinBalance?.symbol === 'USDT' ? '🪙' :
-                                     selectedCoinBalance?.symbol === 'WETH' ? '🔷' :
-                                     selectedCoinBalance?.symbol === 'WBTC' ? '🟠' : '🪙'}
+                                    {selectedCoinBalance?.symbol === 'SUI' ? '🟡' :
+                                        selectedCoinBalance?.symbol === 'USDC' ? '💵' :
+                                            selectedCoinBalance?.symbol === 'USDT' ? '🪙' :
+                                                selectedCoinBalance?.symbol === 'WETH' ? '🔷' :
+                                                    selectedCoinBalance?.symbol === 'WBTC' ? '🟠' : '🪙'}
                                 </span>
                             </div>
                             <select
@@ -413,18 +413,18 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                                 className="w-full px-10 py-2 border border-input rounded-md bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-ring"
                                 disabled={isLoadingBalances}
                             >
-                            {isLoadingBalances ? (
-                                <option>Loading balances...</option>
-                            ) : balances.length === 0 ? (
-                                <option>No coins found</option>
-                            ) : (
-                                balances.map((coin: any) => (
-                                    <option key={coin.symbol} value={coin.symbol}>
-                                        {coin.name} ({coin.symbol}) - {coin.balanceFormatted}
-                                    </option>
-                                ))
-                            )}
-                        </select>
+                                {isLoadingBalances ? (
+                                    <option>Loading balances...</option>
+                                ) : balances.length === 0 ? (
+                                    <option>No coins found</option>
+                                ) : (
+                                    balances.map((coin: any) => (
+                                        <option key={coin.symbol} value={coin.symbol}>
+                                            {coin.name} ({coin.symbol}) - {coin.balanceFormatted}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
                         </div>
                         {selectedCoinBalance && (
                             <p className="text-xs text-muted-foreground mt-1">
@@ -432,7 +432,7 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                             </p>
                         )}
                     </div>
-                    
+
                     <div>
                         <label className="text-sm font-medium mb-2 block">Amount</label>
                         <div className="space-y-2">
@@ -470,16 +470,16 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="flex gap-2 mt-6">
-                    <button 
-                        onClick={onClose} 
+                    <button
+                        onClick={onClose}
                         className="flex-1 px-4 py-2 border border-input bg-white dark:bg-gray-900 text-sm font-medium rounded-md hover:border-primary hover:text-primary hover:bg-primary/10 transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50"
                     >
                         Cancel
                     </button>
-                    <button 
-                        onClick={handleSend} 
+                    <button
+                        onClick={handleSend}
                         disabled={!recipient.trim() || !amount.trim() || isLoading || !selectedCoinBalance || maxAmount === 0 || parseFloat(amount) > maxAmount}
                         className="flex-1 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:hover:bg-primary disabled:hover:shadow-none"
                     >
@@ -505,7 +505,7 @@ function SendTradeModal({ onClose, onSend }: { onClose: () => void; onSend: (con
 
     const handleSend = async () => {
         if (!selectedTrade) return;
-        
+
         setIsLoading(true);
         try {
             const trade = recentTrades.find(t => t.id === selectedTrade);
@@ -527,7 +527,7 @@ function SendTradeModal({ onClose, onSend }: { onClose: () => void; onSend: (con
                         ×
                     </button>
                 </div>
-                
+
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium mb-2 block">Select Recent Trade</label>
@@ -558,16 +558,16 @@ function SendTradeModal({ onClose, onSend }: { onClose: () => void; onSend: (con
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="flex gap-2 mt-6">
-                    <button 
-                        onClick={onClose} 
+                    <button
+                        onClick={onClose}
                         className="flex-1 px-4 py-2 border border-input bg-white dark:bg-gray-900 text-sm font-medium rounded-md hover:border-primary hover:text-primary hover:bg-primary/10 transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50"
                     >
                         Cancel
                     </button>
-                    <button 
-                        onClick={handleSend} 
+                    <button
+                        onClick={handleSend}
                         disabled={!selectedTrade || isLoading}
                         className="flex-1 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:hover:bg-primary disabled:hover:shadow-none"
                     >

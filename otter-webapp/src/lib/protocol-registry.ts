@@ -1,11 +1,13 @@
-// Protocol and address registry for enhanced transaction parsing
-// Maps known addresses to human-readable names and protocol information
+// Comprehensive Sui Protocol Registry
+// Maps package addresses to protocol information for enhanced transaction parsing
 
 export interface ProtocolInfo {
     name: string;
-    type: 'dex' | 'lending' | 'nft' | 'staking' | 'validator' | 'cex' | 'other';
+    type: 'dex' | 'lending' | 'nft' | 'staking' | 'validator' | 'cex' | 'infrastructure' | 'bridge' | 'oracle' | 'other';
+    category: 'DeFi' | 'Infrastructure' | 'NFTs' | 'Gaming' | 'Social' | 'Cross-Chain' | 'Core';
     description?: string;
     website?: string;
+    tvl?: string;
 }
 
 export interface AddressInfo {
@@ -14,94 +16,178 @@ export interface AddressInfo {
     description?: string;
 }
 
-// Known DEX and DeFi protocols
+// Major Sui DeFi Protocols
 export const KNOWN_PROTOCOLS: Record<string, ProtocolInfo> = {
-    // DEXs
+    // === DEXs & Trading Platforms ===
     "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb": {
-        name: "Cetus",
+        name: "Cetus Protocol",
         type: "dex",
-        description: "Leading DEX on Sui",
-        website: "https://cetus.zone"
+        category: "DeFi",
+        description: "Concentrated Liquidity Market Maker (CLMM) DEX - largest protocol on Sui by TVL",
+        website: "https://cetus.zone",
+        tvl: "Top 3 by TVL"
+    },
+    "0xeffc8ae61f439bb34c9b905ff8f29ec56873dcedf81c7123ff2f1f67c45ec302": {
+        name: "Cetus Aggregator",
+        type: "dex",
+        category: "DeFi",
+        description: "Cetus protocol aggregator for optimal trade routing"
+    },
+    "0x996c4d9480708fb8b92aa7acf819fb0497b5ec8e65ba06601cae2fb6db3312c3": {
+        name: "Cetus Integration",
+        type: "dex",
+        category: "DeFi",
+        description: "Cetus integration contract for third-party protocols"
     },
     "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1": {
-        name: "Turbos",
+        name: "Turbos Finance",
         type: "dex",
-        description: "Concentrated liquidity DEX",
-        website: "https://turbos.finance"
+        category: "DeFi",
+        description: "Non-custodial DEX with concentrated liquidity AMM and derivatives trading",
+        website: "https://turbos.finance",
+        tvl: "$33.19M daily volume"
     },
-    "0x5d1b99f4d45f1440f2fd6f535c2aee8e550eaea7af877cafe8d456cdf4c4b8d": {
-        name: "Kriya",
+    "0x4379259b0f0f547b84ec1c81d704f24861edd8afd8fa6bb9c082e44fbf97a27a": {
+        name: "Kriya DEX",
         type: "dex",
-        description: "Orderbook DEX",
-        website: "https://kriya.finance"
+        category: "DeFi",
+        description: "Orderbook-based DEX for perpetuals trading with 20x leverage",
+        website: "https://kriya.finance",
+        tvl: "$2.4M"
     },
     "0x361dd589b98e8fcda9dc7f53a4b2a5b4a5c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8": {
         name: "Bluefin",
         type: "dex",
-        description: "Derivatives trading platform"
+        category: "DeFi",
+        description: "Decentralized perpetuals exchange offering leveraged trading",
+        website: "https://bluefin.io"
     },
     "0x2c8d603bc51326b8c13cef9dd07031a408a48dddb541963357661df5d3204809": {
-        name: "Orderbook",
+        name: "Aftermath Finance",
         type: "dex",
-        description: "Orderbook trading infrastructure"
+        category: "DeFi",
+        description: "Multi-protocol DEX with swaps, liquidity pools, farms, and DCA orders",
+        website: "https://aftermath.finance"
     },
 
-    // Lending protocols
-    "0x6b3178db112372be5a78feb708bc39a4ef49cd52224aa34f8a23c1425d280c27": {
-        name: "Balance Manager",
+    // === Lending Protocols ===
+    "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5": {
+        name: "NAVI Protocol",
         type: "lending",
-        description: "Lending protocol"
+        category: "DeFi",
+        description: "One-stop liquidity protocol offering lending and borrowing services",
+        tvl: "$502M+ (Top 3 by TVL)"
+    },
+    "0xa757975255146dc9686aa823b7838b507f315d704f428cbadad2f4ea061939d9": {
+        name: "Scallop",
+        type: "lending",
+        category: "DeFi",
+        description: "First DeFi protocol officially backed by Sui Foundation - over-collateralized lending",
+        website: "https://scallop.io",
+        tvl: "$570M+"
+    },
+    "0x07871c4b3c847a0f674510d4978d5cf6f960452795e8ff6f189fd2088a3f6ac7": {
+        name: "Scallop Core",
+        type: "lending",
+        category: "DeFi",
+        description: "Scallop protocol core implementation"
+    },
+    "0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf": {
+        name: "Scallop Core Object",
+        type: "lending",
+        category: "DeFi",
+        description: "Scallop protocol core object"
     },
 
-    // NFT marketplaces
-    "0x684df9c8af8583706ba48460c924284f7fde157c230bfec8c3ecfb0f8e18a854": {
-        name: "Stonker",
-        type: "nft",
-        description: "NFT marketplace"
-    },
-
-    // Sui Framework
+    // === Infrastructure & Core Protocols ===
     "0x2": {
         name: "Sui Framework",
         type: "other",
-        description: "Core Sui blockchain framework"
+        category: "Core",
+        description: "Core Sui blockchain framework and standard library"
+    },
+    "0x5306f64e312b581766351c07af79c72fcb1cd25147157fdc2f8ad76de9a3fb6a": {
+        name: "Wormhole Bridge",
+        type: "bridge",
+        category: "Cross-Chain",
+        description: "Cross-chain bridge enabling asset transfers to Sui from multiple networks",
+        website: "https://wormhole.com"
+    },
+    "0xaeab97f96cf9877fee2883315d459552b2b921edc16d7ceac6eab944dd88919c": {
+        name: "Wormhole State",
+        type: "bridge",
+        category: "Cross-Chain",
+        description: "Wormhole bridge state management"
+    },
+    "0x04e20ddf36af412a4096f9014f4a565af9e812db9a05cc40254846cf6ed0ad91": {
+        name: "Pyth Oracle",
+        type: "oracle",
+        category: "Infrastructure",
+        description: "Secure price feeds for DeFi protocols on Sui",
+        website: "https://pyth.network"
+    },
+    "0x6b3178db112372be5a78feb708bc39a4ef49cd52224aa34f8a23c1425d280c27": {
+        name: "DeepBook Protocol",
+        type: "infrastructure",
+        category: "Infrastructure",
+        description: "Premier decentralized central limit order book (CLOB) - Sui's core liquidity layer",
+        website: "https://deepbook.xyz"
     },
 
-    // Oracle and infrastructure
+    // === NFT & Gaming ===
+    "0x684df9c8af8583706ba48460c924284f7fde157c230bfec8c3ecfb0f8e18a854": {
+        name: "BlueMove",
+        type: "nft",
+        category: "NFTs",
+        description: "NFT marketplace supporting dynamic NFTs that evolve over time",
+        website: "https://bluemove.net"
+    },
+
+    // === Stablecoins & Tokens ===
+    "0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a": {
+        name: "Bucket Protocol",
+        type: "other",
+        category: "DeFi",
+        description: "BUCK is an over-collateralized programmable stablecoin backed by Sui ecosystem assets",
+        website: "https://bucketprotocol.io"
+    },
+
+    // === Legacy/Unknown Protocols ===
     "0x719685bc5e45910d8e7e85240d39711e4ce9c5b23bb89cf38daabd9dc9ef915f": {
         name: "Price Oracle",
-        type: "other",
-        description: "Price feed oracle"
+        type: "oracle",
+        category: "Infrastructure",
+        description: "Price feed oracle service"
     },
     "0x794a0d48b2deccba87c8f8c0448a99ac29298a866ce19010b59e44abf45fb910": {
         name: "Market Data",
-        type: "other",
-        description: "Market data provider"
+        type: "infrastructure",
+        category: "Infrastructure",
+        description: "Market data provider service"
     },
     "0xe05dafb5133bcffb8d59f4e12465dc0e9faeaa05e3e342a08fe135800e3e4407": {
         name: "Liquidity Pool",
-        type: "dex",
+        type: "infrastructure",
+        category: "Infrastructure",
         description: "Liquidity pool infrastructure"
     },
     "0xf948981b806057580f91622417534f491da5f61aeaf33d0ed8e69fd5691c95ce": {
         name: "Trading Engine",
-        type: "dex",
-        description: "Trading infrastructure"
-    },
-    "0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a": {
-        name: "Risk Manager",
-        type: "other",
-        description: "Risk management system"
+        type: "infrastructure",
+        category: "Infrastructure",
+        description: "Trading infrastructure service"
     },
     "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f": {
         name: "Fee Collector",
-        type: "other",
+        type: "infrastructure",
+        category: "Infrastructure",
         description: "Fee collection system"
     },
     "0x0000000000000000000000000000000000000000000000000000000000000006": {
         name: "Clock",
-        type: "other",
-        description: "Sui blockchain clock"
+        type: "infrastructure",
+        category: "Core",
+        description: "Sui blockchain clock object"
     }
 };
 

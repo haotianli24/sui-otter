@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, ExternalLink, Bot, Clock, Users, Zap, ArrowDown, ArrowUp, RefreshCw, Activity, Image, Smartphone } from "lucide-react";
+import { Copy, ExternalLink, Bot, Clock, Users, Zap, ArrowDown, ArrowUp, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatAddress, resolveAddressLabel } from "@/lib/protocol-registry";
@@ -17,6 +17,7 @@ interface ActivityItemProps {
     operationsCount: number;
     participants: string[];
     onViewDetails?: (digest: string) => void;
+    currentUserAddress?: string;
 }
 
 export function ActivityItem({
@@ -28,6 +29,7 @@ export function ActivityItem({
     operationsCount,
     participants,
     onViewDetails,
+    currentUserAddress,
 }: ActivityItemProps) {
     const [showAIExplanation, setShowAIExplanation] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -191,8 +193,9 @@ export function ActivityItem({
                             <TransactionEmbed
                                 digest={digest}
                                 senderName={resolveAddressLabel(sender) || formatAddress(sender)}
-                                isCurrentUser={false}
+                                isCurrentUser={currentUserAddress && participants.includes(currentUserAddress)}
                                 groupName="Activity Stream"
+                                currentUserAddress={currentUserAddress}
                             />
                         </div>
                     </div>

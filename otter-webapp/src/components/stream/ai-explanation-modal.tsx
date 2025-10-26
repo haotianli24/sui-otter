@@ -1,6 +1,6 @@
 
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, ExternalLink, Loader2, AlertCircle, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +16,13 @@ interface AIExplanationModalProps {
     onClose: () => void;
     digest: string;
     txData?: any;
+    senderName?: string;
+    isCurrentUser?: boolean;
+    groupName?: string;
+    currentUserAddress?: string;
 }
 
-export function AIExplanationModal({ isOpen, onClose, digest, txData }: AIExplanationModalProps) {
+export function AIExplanationModal({ isOpen, onClose, digest, txData, senderName, isCurrentUser, groupName, currentUserAddress }: AIExplanationModalProps) {
     const [explanation, setExplanation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -36,7 +40,12 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData }: AIExplan
     };
 
     const generateExplanation = async () => {
-        if (explanation || isLoading) return;
+        if (isLoading) return;
+
+        // Clear existing explanation if regenerating
+        if (explanation) {
+            setExplanation(null);
+        }
 
         setIsLoading(true);
         setError(null);
@@ -47,11 +56,11 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData }: AIExplan
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     digest,
-                    txData,
                     context: {
-                        senderName: "User",
-                        isCurrentUser: true,
-                        groupName: "Activity Stream"
+                        senderName: senderName || "Unknown",
+                        isCurrentUser: isCurrentUser || false,
+                        groupName: groupName || "Activity Stream",
+                        currentUserAddress: currentUserAddress
                     }
                 }),
             });
@@ -81,11 +90,11 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData }: AIExplan
     };
 
     // Generate explanation when modal opens
-    useState(() => {
+    useEffect(() => {
         if (isOpen && !explanation && !isLoading && !error) {
             generateExplanation();
         }
-    });
+    }, [isOpen]);
 
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -138,9 +147,12 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData }: AIExplan
                         </div>
 
                         {isLoading && (
-                            <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="text-sm">Generating AI explanation...</span>
+                            <div className="flex items-center gap-3 p-4 bg-[#4DA2FF]/10 border border-[#4DA2FF]/20 rounded-lg">
+                                <Loader2 className="h-5 w-5 animate-spin text-[#4DA2FF]" />
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium text-[#4DA2FF]">AI is analyzing your transaction...</span>
+                                    <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
+                                </div>
                             </div>
                         )}
 
@@ -162,8 +174,37 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData }: AIExplan
                         )}
 
                         {explanation && (
-                            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                                <p className="text-sm leading-relaxed">{explanation}</p>
+                            <div className="space-y-3">
+                                <div className="p-4 bg-[#4DA2FF]/10 border border-[#4DA2FF]/20 rounded-lg">
+                                    <div className="flex items-start gap-2">
+                                        <div className="text-lg">🤖</div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-[#4DA2FF] mb-2">AI Explanation</p>
+                                            <p className="text-sm leading-relaxed text-foreground">{explanation}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={generateExplanation}
+                                        disabled={isLoading}
+                                        className="flex items-center gap-2"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Regenerating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>🔄</span>
+                                                Regenerate
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>

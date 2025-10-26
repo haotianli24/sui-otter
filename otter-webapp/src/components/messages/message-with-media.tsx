@@ -10,9 +10,10 @@ interface MessageWithMediaProps {
   isOwn: boolean;
   senderName?: string;
   groupName?: string;
+  currentUserAddress?: string;
 }
 
-export function MessageWithMedia({ content, isOwn, senderName, groupName }: MessageWithMediaProps) {
+export function MessageWithMedia({ content, isOwn, senderName, groupName, currentUserAddress }: MessageWithMediaProps) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [mediaError, setMediaError] = useState(false);
@@ -217,7 +218,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
             variant="ghost"
             size="sm"
             onClick={() => setShowTransactionEmbed(!showTransactionEmbed)}
-            className={`h-6 px-2 text-xs ${isOwn ? 'text-primary-foreground hover:text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-3 py-2 text-xs ${isOwn ? 'text-primary-foreground hover:text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
             {showTransactionEmbed ? (
               <>
@@ -242,6 +243,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
             senderName={senderName || "Unknown"}
             isCurrentUser={isOwn}
             groupName={groupName || "Channel"}
+            currentUserAddress={currentUserAddress}
           />
         </div>
       )}

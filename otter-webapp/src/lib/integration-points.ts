@@ -9,7 +9,61 @@
  * components are completed.
  */
 
-import { Message, Conversation, Community, User } from "./mock-data";
+// Define interfaces locally instead of importing from mock-data
+interface User {
+    id: string;
+    name: string;
+    address: string;
+    avatar?: string;
+    isOnline?: boolean;
+}
+
+interface Message {
+    id: string;
+    content: string;
+    sender: string;
+    timestamp: number;
+    channelId: string;
+    type?: "text" | "trade" | "crypto";
+    tradeData?: {
+        action: "buy" | "sell";
+        token: string;
+        amount: string;
+        price: string;
+    };
+    cryptoData?: {
+        amount: string;
+        token: string;
+    };
+}
+
+interface Conversation {
+    id: string;
+    type: "direct" | "group";
+    name?: string;
+    participants: User[];
+    lastMessage?: Message;
+    unreadCount: number;
+    avatar?: string;
+}
+
+interface Community {
+    id: string;
+    name: string;
+    description: string;
+    avatar: string;
+    owner: User;
+    memberCount: number;
+    type: "paid" | "free" | "token-gated";
+    price?: string;
+    tokenRequired?: {
+        symbol: string;
+        amount: string;
+    };
+    isJoined?: boolean;
+    trending?: boolean;
+    priceChange?: number;
+}
 
 // ============================================================================
 // AUTHENTICATION
