@@ -58,7 +58,7 @@ export const MessagingClientProvider = ({
           })
         );
 
-      // Create storage adapter
+      // Create storage adapter - using official Walrus testnet
       const storage = new WalrusStorageAdapter(extendedClient, {
         publisher: 'https://publisher.walrus-testnet.walrus.space',
         aggregator: 'https://aggregator.testnet.walrus.mirai.cloud',

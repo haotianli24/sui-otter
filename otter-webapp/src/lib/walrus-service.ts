@@ -222,27 +222,23 @@ export function parseFileReference(content: string): {
  * Get file URL from Walrus aggregators
  */
 export async function getFileUrl(blobId: string): Promise<string> {
-    // For testnet, try direct publisher access first (faster than aggregators)
-    const publishers = [
-        'https://publisher.walrus-testnet.walrus.space/v1',
-        'https://publisher.testnet.walrus.mirai.cloud/v1'
-    ];
-
-    // Try publishers first (usually faster on testnet)
-    for (const baseUrl of publishers) {
-        try {
-            const url = `${baseUrl}/${blobId}`;
-            const response = await fetch(url, { method: 'HEAD' });
-            if (response.ok) {
-                console.log(`[WalrusService] File found on publisher: ${url}`);
-                return url;
-            }
-        } catch (error) {
-            console.warn(`[WalrusService] Failed to check publisher ${baseUrl}:`, error);
+    // Try Walruscan testnet first (the real explorer)
+    try {
+        console.log(`[WalrusService] Fetching file from Walruscan: ${blobId}`);
+        
+        // Try Walruscan testnet blob URL
+        const walruscanUrl = `https://walruscan.com/testnet/blob/${blobId}`;
+        const response = await fetch(walruscanUrl, { method: 'HEAD' });
+        
+        if (response.ok) {
+            console.log(`[WalrusService] File found on Walruscan: ${walruscanUrl}`);
+            return walruscanUrl;
         }
+    } catch (error) {
+        console.warn(`[WalrusService] Walruscan failed:`, error);
     }
 
-    // Fallback to aggregators
+    // Fallback to official Walrus testnet aggregators
     const aggregators = [
         'https://aggregator.testnet.walrus.mirai.cloud/v1',
         'https://aggregator.walrus-testnet.walrus.space/v1'
@@ -261,18 +257,10 @@ export async function getFileUrl(blobId: string): Promise<string> {
         }
     }
 
-    // As a last resort, try constructing direct URLs (sometimes works even if HEAD fails)
-    const directUrls = [
-        `https://publisher.walrus-testnet.walrus.space/v1/${blobId}`,
-        `https://publisher.testnet.walrus.mirai.cloud/v1/${blobId}`,
-        `https://aggregator.testnet.walrus.mirai.cloud/v1/${blobId}`,
-        `https://aggregator.walrus-testnet.walrus.space/v1/${blobId}`
-    ];
-
-    console.log('[WalrusService] Trying direct URL construction as fallback...');
-    
-    // Return the first URL as a fallback (let the browser handle the 404)
-    return directUrls[0];
+    // Last resort: return Walruscan URL (let browser handle it)
+    const fallbackUrl = `https://walruscan.com/testnet/blob/${blobId}`;
+    console.log(`[WalrusService] Using Walruscan fallback: ${fallbackUrl}`);
+    return fallbackUrl;
 }
 
 /**
