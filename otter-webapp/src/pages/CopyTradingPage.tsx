@@ -30,6 +30,7 @@ export default function CopyTradingPage() {
     const [copiedTrades, setCopiedTrades] = useState<CopiedTrade[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [syncMessage, setSyncMessage] = useState<string | null>(null);
     
     // Load followed traders and traders list from localStorage on mount
     useEffect(() => {
@@ -323,10 +324,12 @@ export default function CopyTradingPage() {
         
         // Copy to clipboard
         navigator.clipboard.writeText(jsonStr).then(() => {
-            alert('✅ Copied to clipboard!\n\nPaste this into:\n/agent/followed_traders.json\n\nThe agent will automatically pick up changes within 10 seconds.');
+            setSyncMessage('✅ Synced successfully! Agent will update within 10 seconds.');
+            setTimeout(() => setSyncMessage(null), 5000); // Clear after 5 seconds
         }).catch(() => {
-            // Fallback: show in alert
-            alert(`Copy this to /agent/followed_traders.json:\n\n${jsonStr}`);
+            setSyncMessage('⚠️ Failed to copy. Please copy manually from console.');
+            console.log('Copy this to /agent/followed_traders.json:', jsonStr);
+            setTimeout(() => setSyncMessage(null), 5000);
         });
     };
     
@@ -364,10 +367,10 @@ export default function CopyTradingPage() {
             <div className="border-b border-border bg-card px-6 py-4">
                 <h1 className="text-2xl font-bold flex items-center gap-2">
                     <TrendingUp className="h-6 w-6 text-primary" />
-                    Copy Trading
+                    Agents
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Automatically copy trades from professional traders
+                    AI agents that automatically copy trades from top traders
                 </p>
             </div>
 
@@ -546,6 +549,18 @@ export default function CopyTradingPage() {
                                 </Button>
                             )}
                         </div>
+                        
+                        {/* Sync success message */}
+                        {syncMessage && (
+                            <div className={`p-3 rounded-lg text-sm ${
+                                syncMessage.includes('✅') 
+                                    ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
+                                    : 'bg-yellow-50 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800'
+                            }`}>
+                                {syncMessage}
+                            </div>
+                        )}
+                        
                         <div className="grid gap-4">
                             {followingTraders.map((trader) => (
                                 <div
