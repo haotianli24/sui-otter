@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ZeroBackground } from '@/components/ui/zero-background';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 
@@ -24,11 +25,18 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalMessages, setTotalMessages] = useState(1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Update total messages count
+  useEffect(() => {
+    setTotalMessages(messages.length);
   }, [messages]);
 
   const handleSendMessage = async (message: string) => {
@@ -92,41 +100,92 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
+      <div className="border-b border-border flex-shrink-0 p-6 bg-card">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="section-heading">Otter AI Chat</h1>
-            <p className="muted-text">Powered by Fetch.ai ASI:One</p>
+          <div className="flex-1">
+            <h2 className="section-heading flex items-center gap-2">
+              <Bot className="h-5 w-5 text-green-500" />
+              Otter AI Chat
+            </h2>
+            <p className="muted-text">
+              Powered by Fetch.ai ASI:One
+            </p>
+          </div>
+          <div className="flex gap-6 text-sm">
+            <div>
+              <p className="small-text">Messages</p>
+              <p className="card-heading">{totalMessages}</p>
+            </div>
+            <div>
+              <p className="small-text">Status</p>
+              <p className="card-heading flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Live
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-6 py-6">
-          {messages.map((msg, index) => (
-            <ChatMessage
-              key={index}
-              role={msg.role}
-              content={msg.content}
-            />
-          ))}
-          
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="flex justify-start mb-4">
-              <div className="bg-green-500 text-white rounded-2xl px-4 py-3">
-                <Loader2 className="h-4 w-4 animate-spin" />
+      {/* Messages Area */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 bg-background relative">
+        <ZeroBackground />
+        <div
+          className="relative z-10"
+          onMouseMove={(e) => {
+            // Forward mouse move events to the ZeroBackground
+            const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+            if (zeroBackground) {
+              zeroBackground.dispatchEvent(new MouseEvent('mousemove', {
+                clientX: e.clientX,
+                clientY: e.clientY,
+                bubbles: true
+              }));
+            }
+          }}
+          onMouseLeave={(e) => {
+            // Forward mouse leave events to the ZeroBackground
+            const zeroBackground = e.currentTarget.parentElement?.querySelector('[data-zero-background]');
+            if (zeroBackground) {
+              zeroBackground.dispatchEvent(new MouseEvent('mouseleave', {
+                clientX: e.clientX,
+                clientY: e.clientY,
+                bubbles: true
+              }));
+            }
+          }}
+        >
+          {messages.length === 0 ? (
+            <div className="empty-state">
+              <div className="text-center">
+                <Bot className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                <p className="section-heading mb-2">Start a conversation</p>
+                <p className="muted-text">Ask me anything about Sui blockchain</p>
               </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((msg, index) => (
+                <ChatMessage
+                  key={index}
+                  role={msg.role}
+                  content={msg.content}
+                />
+              ))}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-green-500 text-white rounded-2xl px-4 py-3">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
           
@@ -134,11 +193,9 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
         </div>
       </div>
 
-      {/* Input Container */}
-      <div className="bg-card border-t border-border">
-        <div className="max-w-4xl mx-auto">
-          <ChatInput onSend={handleSendMessage} disabled={isLoading} />
-        </div>
+      {/* Input Area */}
+      <div className="border-t border-border flex-shrink-0 bg-card">
+        <ChatInput onSend={handleSendMessage} disabled={isLoading} />
       </div>
     </div>
   );

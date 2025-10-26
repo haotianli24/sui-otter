@@ -1,5 +1,5 @@
-import { useState, KeyboardEvent } from 'react';
-import { Send } from 'lucide-react';
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ChatInputProps {
@@ -8,16 +8,28 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ onSend, disabled = false }: ChatInputProps) {
-  const [input, setInput] = useState('');
+  const [message, setMessage] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '44px';
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        120
+      )}px`;
+    }
+  }, [message]);
 
   const handleSend = () => {
-    if (input.trim() && !disabled) {
-      onSend(input.trim());
-      setInput('');
+    if (message.trim() && !disabled) {
+      onSend(message.trim());
+      setMessage('');
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -25,23 +37,40 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
   };
 
   return (
-    <div className="flex gap-2 p-4">
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyPress={handleKeyPress}
-        placeholder="Ask Otter AI anything about Sui..."
-        disabled={disabled}
-        className="flex-1 px-4 py-2 border border-input rounded-full focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed bg-background text-foreground"
-      />
-      <Button
-        onClick={handleSend}
-        disabled={disabled || !input.trim()}
-        className="rounded-full px-6 bg-green-500 hover:bg-green-600"
-      >
-        <Send className="h-4 w-4" />
-      </Button>
+    <div className="p-4 border-t border-border bg-card">
+      <div className="flex items-end gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex-shrink-0"
+          title="AI suggestions"
+          disabled={disabled}
+        >
+          <Sparkles className="h-5 w-5" />
+        </Button>
+        <textarea
+          ref={textareaRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask about Sui blockchain... (Shift+Enter for new line)"
+          className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-background border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+          rows={1}
+          disabled={disabled}
+        />
+        <Button
+          onClick={handleSend}
+          disabled={!message.trim() || disabled}
+          size="icon"
+          className="flex-shrink-0 bg-green-500 hover:bg-green-600"
+          title="Send message (Enter)"
+        >
+          <Send className="h-5 w-5" />
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2 px-1">
+        Tip: Ask about trading, NFTs, communities, or any Sui blockchain topic
+      </p>
     </div>
   );
 }
