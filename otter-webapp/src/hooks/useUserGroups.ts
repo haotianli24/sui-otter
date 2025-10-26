@@ -128,7 +128,7 @@ export function useAllGroups() {
     queryFn: async (): Promise<Group[]> => {
       try {
         const client = new SuiGraphQLClient({
-          url: "https://graphql.mainnet.sui.io/graphql"
+          url: "https://graphql.testnet.sui.io/graphql"
         });
 
         const query = graphql(`
@@ -265,7 +265,7 @@ export function useCommunityMembers(communityId: string) {
 
         // Fallback: Query MembershipNFT objects using GraphQL
         const client = new SuiGraphQLClient({
-          url: "https://graphql.mainnet.sui.io/graphql"
+          url: "https://graphql.testnet.sui.io/graphql"
         });
 
         const query = graphql(`

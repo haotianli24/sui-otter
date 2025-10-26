@@ -76,11 +76,12 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
       } catch (error) {
         console.warn('File not immediately available, trying different approaches...');
 
-        // Try multiple approaches with different delays (mainnet is faster)
+        // Try multiple approaches with different delays (testnet is slower)
         const approaches = [
-          { delay: 1000, name: 'Quick retry' },
-          { delay: 3000, name: 'Standard retry' },
-          { delay: 5000, name: 'Extended retry' }
+          { delay: 2000, name: 'Quick retry' },
+          { delay: 5000, name: 'Standard retry' },
+          { delay: 10000, name: 'Extended retry' },
+          { delay: 30000, name: 'Long retry' }
         ];
 
         let approachIndex = 0;
@@ -182,7 +183,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
       {mediaError && (
         <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'text-primary-foreground/80' : 'text-destructive/70'}`}>
           <ImageIcon className="h-4 w-4" />
-          <span>Image processing...</span>
+          <span>Image processing... (testnet delay)</span>
           <Button
             size="sm"
             variant="outline"

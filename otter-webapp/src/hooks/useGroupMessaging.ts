@@ -91,7 +91,7 @@ export function useGroupChat(communityId: string) {
 
         try {
           const client = new SuiGraphQLClient({
-            url: "https://graphql.mainnet.sui.io/graphql"
+            url: "https://graphql.testnet.sui.io/graphql"
           });
 
           const query = graphql(`
@@ -335,7 +335,7 @@ export function useGroupMessages(communityId: string) {
         // Try GraphQL first
         try {
           const client = new SuiGraphQLClient({
-            url: "https://graphql.mainnet.sui.io/graphql"
+            url: "https://graphql.testnet.sui.io/graphql"
           });
 
           const query = graphql(`

@@ -419,7 +419,7 @@ export default function CopyTradingPage() {
             console.log('🔍 Fetching stats for:', address);
 
             // Try using Sui RPC directly instead of Suiscan
-            const response = await fetch('https://fullnode.mainnet.sui.io:443', {
+            const response = await fetch('https://fullnode.testnet.sui.io:443', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

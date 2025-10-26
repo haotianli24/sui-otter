@@ -222,13 +222,13 @@ export function parseFileReference(content: string): {
  * Get file URL from Walrus aggregators
  */
 export async function getFileUrl(blobId: string): Promise<string> {
-    // For mainnet, try direct publisher access first (faster than aggregators)
+    // For testnet, try direct publisher access first (faster than aggregators)
     const publishers = [
-        'https://publisher.walrus-mainnet.walrus.space/v1',
-        'https://publisher.mainnet.walrus.mirai.cloud/v1'
+        'https://publisher.walrus-testnet.walrus.space/v1',
+        'https://publisher.testnet.walrus.mirai.cloud/v1'
     ];
 
-    // Try publishers first (usually faster on mainnet)
+    // Try publishers first (usually faster on testnet)
     for (const baseUrl of publishers) {
         try {
             const url = `${baseUrl}/${blobId}`;
@@ -244,8 +244,8 @@ export async function getFileUrl(blobId: string): Promise<string> {
 
     // Fallback to aggregators
     const aggregators = [
-        'https://aggregator.mainnet.walrus.mirai.cloud/v1',
-        'https://aggregator.walrus-mainnet.walrus.space/v1'
+        'https://aggregator.testnet.walrus.mirai.cloud/v1',
+        'https://aggregator.walrus-testnet.walrus.space/v1'
     ];
 
     for (const baseUrl of aggregators) {
@@ -263,14 +263,14 @@ export async function getFileUrl(blobId: string): Promise<string> {
 
     // As a last resort, try constructing direct URLs (sometimes works even if HEAD fails)
     const directUrls = [
-        `https://publisher.walrus-mainnet.walrus.space/v1/${blobId}`,
-        `https://publisher.mainnet.walrus.mirai.cloud/v1/${blobId}`,
-        `https://aggregator.mainnet.walrus.mirai.cloud/v1/${blobId}`,
-        `https://aggregator.walrus-mainnet.walrus.space/v1/${blobId}`
+        `https://publisher.walrus-testnet.walrus.space/v1/${blobId}`,
+        `https://publisher.testnet.walrus.mirai.cloud/v1/${blobId}`,
+        `https://aggregator.testnet.walrus.mirai.cloud/v1/${blobId}`,
+        `https://aggregator.walrus-testnet.walrus.space/v1/${blobId}`
     ];
 
     console.log('[WalrusService] Trying direct URL construction as fallback...');
-
+    
     // Return the first URL as a fallback (let the browser handle the 404)
     return directUrls[0];
 }

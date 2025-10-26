@@ -7,7 +7,7 @@ import {
 } from "../protocol-registry";
 
 // Create a single client instance
-const client = new SuiClient({ url: getFullnodeUrl("mainnet") });
+const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 
 export interface TransactionOperation {
     type: "transfer" | "create" | "mutate" | "delete" | "call" | "publish";
