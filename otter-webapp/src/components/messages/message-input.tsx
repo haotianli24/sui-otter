@@ -6,9 +6,10 @@ import { Send, Paperclip, Smile } from "lucide-react";
 
 interface MessageInputProps {
     onSend: (content: string) => void;
+    disabled?: boolean;
 }
 
-export function MessageInput({ onSend }: MessageInputProps) {
+export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
     const [message, setMessage] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -62,12 +63,13 @@ export function MessageInput({ onSend }: MessageInputProps) {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Type a message... (Shift+Enter for new line)"
-                    className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-background border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="flex-1 min-h-[44px] max-h-[120px] px-4 py-3 bg-background border border-input text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
                     rows={1}
+                    disabled={disabled}
                 />
                 <Button
                     onClick={handleSend}
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || disabled}
                     size="icon"
                     className="flex-shrink-0"
                     title="Send message (Enter)"
