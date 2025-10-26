@@ -33,12 +33,12 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
         onKeyPress={handleKeyPress}
         placeholder="Ask Otter AI anything about Sui..."
         disabled={disabled}
-        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        className="flex-1 px-4 py-2 border border-input rounded-full focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed bg-background text-foreground"
       />
       <Button
         onClick={handleSend}
         disabled={disabled || !input.trim()}
-        className="rounded-full px-6 bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-300"
+        className="rounded-full px-6 bg-green-500 hover:bg-green-600"
       >
         <Send className="h-4 w-4" />
       </Button>

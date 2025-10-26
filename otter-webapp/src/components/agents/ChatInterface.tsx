@@ -92,21 +92,20 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div className="bg-card border-b border-border px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={onBack}
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Otter AI Chat</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Powered by Fetch.ai ASI:One</p>
+            <h1 className="section-heading">Otter AI Chat</h1>
+            <p className="muted-text">Powered by Fetch.ai ASI:One</p>
           </div>
         </div>
       </div>
@@ -136,7 +135,7 @@ export default function ChatInterface({ onBack }: ChatInterfaceProps) {
       </div>
 
       {/* Input Container */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+      <div className="bg-card border-t border-border">
         <div className="max-w-4xl mx-auto">
           <ChatInput onSend={handleSendMessage} disabled={isLoading} />
         </div>
