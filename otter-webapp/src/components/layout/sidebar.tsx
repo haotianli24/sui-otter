@@ -14,8 +14,6 @@ import {
     X,
     Waves,
     TrendingUp,
-    TestTube,
-    Image,
 } from "lucide-react";
 import SuiLogo from "/sui-sui-logo.svg";
 
@@ -49,16 +47,6 @@ const navItems = [
         name: "Profile",
         href: "/profile",
         icon: User,
-    },
-    {
-        name: "Test",
-        href: "/test",
-        icon: TestTube,
-    },
-    {
-        name: "Explorer",
-        href: "/explorer",
-        icon: Image,
     },
     {
         name: "Settings",
