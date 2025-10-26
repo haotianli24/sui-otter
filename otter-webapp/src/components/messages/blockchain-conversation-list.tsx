@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { GradientAvatar } from "@/components/ui/gradient-avatar";
 import { useMessaging } from "@/contexts/messaging-context";
 import { formatDistanceToNow } from "@/lib/format-date";
 
@@ -83,11 +83,10 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
             className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${selectedId === channel.id ? "bg-muted" : ""
               }`}
           >
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {getOtherParticipant(channel).slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <GradientAvatar 
+              address={channel.id}
+              size="md"
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium truncate">

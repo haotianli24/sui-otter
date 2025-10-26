@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { GradientAvatar } from '@/components/ui/gradient-avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Copy, ExternalLink, Globe } from 'lucide-react';
@@ -22,7 +22,6 @@ export function UserProfilePopup({ address, isOpen, onClose, position }: UserPro
 
   const isLoading = usernameLoading || profileLoading;
   const displayName = username || getDisplayName(address);
-  const avatarFallback = username ? username.slice(0, 2).toUpperCase() : getDisplayName(address).slice(0, 2).toUpperCase();
 
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
@@ -58,12 +57,10 @@ export function UserProfilePopup({ address, isOpen, onClose, position }: UserPro
           <CardContent className="space-y-4">
             {/* Profile Picture and Basic Info */}
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={onChainProfile?.avatarUrl || ''} alt={displayName} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {avatarFallback}
-                </AvatarFallback>
-              </Avatar>
+              <GradientAvatar 
+                address={address}
+                size="lg"
+              />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-lg truncate">
                   {isLoading ? 'Loading...' : displayName}

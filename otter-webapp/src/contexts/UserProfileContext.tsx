@@ -45,15 +45,26 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(usernameLoading || profileLoading);
 
-    // Prioritize on-chain data
+    // Check localStorage for any locally stored profile data (like displayName, email)
+    let localProfileData: UserProfile | null = null;
+    try {
+      const storedProfiles = localStorage.getItem(STORAGE_KEY);
+      const profiles: Record<string, UserProfile> = storedProfiles ? JSON.parse(storedProfiles) : {};
+      localProfileData = profiles[currentAccount.address] || null;
+    } catch (error) {
+      console.error('Error reading local profile data:', error);
+    }
+
+    // Prioritize on-chain data for username, but preserve local displayName if set separately
     if (onChainProfile) {
       const onChainUserProfile: UserProfile = {
         address: currentAccount.address,
         username: onChainProfile.username,
-        displayName: onChainProfile.username,
+        displayName: localProfileData?.displayName || onChainProfile.username,
         bio: onChainProfile.bio,
         avatar: onChainProfile.avatarUrl,
         website: onChainProfile.website,
+        email: localProfileData?.email, // Email is only stored locally
       };
       setProfile(onChainUserProfile);
       setIsOnChainProfile(true);
@@ -66,8 +77,9 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       const usernameProfile: UserProfile = {
         address: currentAccount.address,
         username: onChainUsername,
-        displayName: onChainUsername,
-        bio: '',
+        displayName: localProfileData?.displayName || onChainUsername,
+        bio: localProfileData?.bio || '',
+        email: localProfileData?.email,
       };
       setProfile(usernameProfile);
       setIsOnChainProfile(true);
@@ -126,11 +138,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         website: website || profile.website || '',
       });
 
-      // Update local state
+      // Update local state - keep existing displayName unless it's not set
       const updatedProfile = {
         ...profile,
         username: username.trim(),
-        displayName: username.trim() || profile.displayName,
+        displayName: profile.displayName || username.trim(),
         bio: bio || profile.bio,
         avatar: avatarUrl || profile.avatar,
         website: website || profile.website,
@@ -141,11 +153,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error setting username on-chain:', error);
       
-      // Fallback to localStorage only
+      // Fallback to localStorage only - keep existing displayName unless it's not set
       const updatedProfile = {
         ...profile,
         username: username.trim(),
-        displayName: username.trim() || profile.displayName,
+        displayName: profile.displayName || username.trim(),
         bio: bio || profile.bio,
         avatar: avatarUrl || profile.avatar,
         website: website || profile.website,
