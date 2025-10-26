@@ -13,6 +13,7 @@ import {
     Menu,
     X,
     Waves,
+    TrendingUp,
 } from "lucide-react";
 import SuiLogo from "/sui-sui-logo.svg";
 
@@ -31,6 +32,11 @@ const navItems = [
         name: "Stream",
         href: "/stream",
         icon: Waves,
+    },
+    {
+        name: "Agents",
+        href: "/copy-trading",
+        icon: TrendingUp,
     },
     {
         name: "Discover",
