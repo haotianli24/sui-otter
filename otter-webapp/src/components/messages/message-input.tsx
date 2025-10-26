@@ -6,8 +6,7 @@ import { Send, Plus, Coins, TrendingUp, FileText } from "lucide-react";
 import { getFileMetadata, getFileIcon, formatFileSize, validateFile } from "../../lib/walrus-service";
 import { useUserBalances } from "@/hooks/useUserBalances";
 import { Transaction } from "@mysten/sui/transactions";
-import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
-import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useSignAndExecuteTransaction, useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 
 interface MessageInputProps {
     onSend: (content: string, mediaFile?: File) => void;
@@ -263,6 +262,7 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
     const { data: balances = [], isLoading: isLoadingBalances } = useUserBalances();
     const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
     const currentAccount = useCurrentAccount();
+    const suiClient = useSuiClient();
 
     // Get the selected coin balance
     const selectedCoinBalance = balances.find((b: any) => b.symbol === selectedCoin);
@@ -273,17 +273,43 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
         
         setIsLoading(true);
         try {
-            // Convert amount to MIST (1 SUI = 1,000,000,000 MIST)
-            const amountInMist = Math.floor(parseFloat(amount) * 1_000_000_000);
+            // Get the selected token metadata
+            const selectedToken = balances.find((b: any) => b.symbol === selectedCoin);
+            if (!selectedToken) {
+                throw new Error('Selected token not found');
+            }
+
+            // Convert amount to smallest unit
+            const decimals = selectedCoin === 'SUI' ? 9 : 9; // Most tokens use 9 decimals
+            const amountInSmallestUnit = Math.floor(parseFloat(amount) * Math.pow(10, decimals));
             
             // Create transaction
             const tx = new Transaction();
             
-            // Transfer SUI to recipient
-            tx.transferObjects(
-                [tx.splitCoins(tx.gas, [amountInMist])],
-                recipient.trim()
-            );
+            if (selectedCoin === 'SUI') {
+                // Transfer SUI (split from gas)
+                tx.transferObjects(
+                    [tx.splitCoins(tx.gas, [amountInSmallestUnit])],
+                    recipient.trim()
+                );
+            } else {
+                // Transfer other tokens (need to get coin objects first)
+                const coinObjects = await suiClient.getCoins({
+                    owner: currentAccount.address,
+                    coinType: selectedToken.coinType,
+                });
+                
+                if (coinObjects.data.length === 0) {
+                    throw new Error(`No ${selectedCoin} coins found`);
+                }
+                
+                // Use the first coin object
+                const coinObject = coinObjects.data[0];
+                tx.transferObjects(
+                    [tx.splitCoins(tx.object(coinObject.coinObjectId), [amountInSmallestUnit])],
+                    recipient.trim()
+                );
+            }
 
             // Execute transaction
             const result = await signAndExecute({
@@ -350,12 +376,43 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                     
                     <div>
                         <label className="text-sm font-medium mb-2 block">Coin</label>
-                        <select
-                            value={selectedCoin}
-                            onChange={(e) => setSelectedCoin(e.target.value)}
-                            className="w-full px-3 py-2 border border-input rounded-md bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-ring"
-                            disabled={isLoadingBalances}
-                        >
+                        <div className="relative">
+                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+                                {selectedCoinBalance ? (
+                                    <img 
+                                        src={selectedCoinBalance.icon} 
+                                        alt={selectedCoinBalance.symbol} 
+                                        className="w-5 h-5 rounded-full filter dark:brightness-0 dark:invert"
+                                        onLoad={() => console.log('Image loaded successfully:', selectedCoinBalance?.icon)}
+                                        onError={(e) => {
+                                            // Fallback to emoji if image fails to load
+                                            console.log('Image failed to load:', selectedCoinBalance?.icon);
+                                            e.currentTarget.style.display = 'none';
+                                            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                            if (nextElement) {
+                                                nextElement.style.display = 'inline';
+                                            }
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="w-5 h-5 bg-gray-300 rounded-full flex items-center justify-center">
+                                        <span className="text-xs">?</span>
+                                    </div>
+                                )}
+                                <span className="text-lg hidden">
+                                    {selectedCoinBalance?.symbol === 'SUI' ? '🟡' : 
+                                     selectedCoinBalance?.symbol === 'USDC' ? '💵' :
+                                     selectedCoinBalance?.symbol === 'USDT' ? '🪙' :
+                                     selectedCoinBalance?.symbol === 'WETH' ? '🔷' :
+                                     selectedCoinBalance?.symbol === 'WBTC' ? '🟠' : '🪙'}
+                                </span>
+                            </div>
+                            <select
+                                value={selectedCoin}
+                                onChange={(e) => setSelectedCoin(e.target.value)}
+                                className="w-full px-10 py-2 border border-input rounded-md bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-ring"
+                                disabled={isLoadingBalances}
+                            >
                             {isLoadingBalances ? (
                                 <option>Loading balances...</option>
                             ) : balances.length === 0 ? (
@@ -363,11 +420,12 @@ function SendCryptoModal({ onClose, onSend }: { onClose: () => void; onSend: (co
                             ) : (
                                 balances.map((coin: any) => (
                                     <option key={coin.symbol} value={coin.symbol}>
-                                        {coin.icon} {coin.name} ({coin.symbol}) - {coin.balanceFormatted}
+                                        {coin.name} ({coin.symbol}) - {coin.balanceFormatted}
                                     </option>
                                 ))
                             )}
                         </select>
+                        </div>
                         {selectedCoinBalance && (
                             <p className="text-xs text-muted-foreground mt-1">
                                 Balance: {selectedCoinBalance.balanceFormatted} {selectedCoinBalance.symbol}
