@@ -10,24 +10,12 @@ import { AlertCircle, Key, Plus, X } from "lucide-react";
 import { isValidSuiAddress } from "@mysten/sui/utils";
 import { SessionKeyProvider, useSessionKey } from "../providers/SessionKeyProvider";
 import { MessagingClientProvider } from "../providers/MessagingClientProvider";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 
 function MessagesPageContent() {
     const currentAccount = useCurrentAccount();
     const { sessionKey, isInitializing, initializeManually, error } = useSessionKey();
-    const {
-        channels,
-        messages,
-        sendMessage,
-        fetchMessages,
-        isReady,
-        createChannel,
-        isCreatingChannel
-    } = useMessaging();
-    const [selectedChannelId, setSelectedChannelId] = useState<string | undefined>();
-    const [showCreateChannel, setShowCreateChannel] = useState(false);
-    const [recipientAddress, setRecipientAddress] = useState("");
-    const [createChannelError, setCreateChannelError] = useState<string | null>(null);
-
+    
     // Show wallet connection prompt if no wallet connected
     if (!currentAccount) {
         return (
@@ -56,6 +44,21 @@ function MessagesPageContent() {
             </div>
         );
     }
+
+    // Only call useMessaging when we have a session key
+    const {
+        channels,
+        messages,
+        sendMessage,
+        fetchMessages,
+        isReady,
+        createChannel,
+        isCreatingChannel
+    } = useMessaging();
+    const [selectedChannelId, setSelectedChannelId] = useState<string | undefined>();
+    const [showCreateChannel, setShowCreateChannel] = useState(false);
+    const [recipientAddress, setRecipientAddress] = useState("");
+    const [createChannelError, setCreateChannelError] = useState<string | null>(null);
 
     // Auto-select first channel if available
     useEffect(() => {
@@ -292,10 +295,12 @@ function MessagesPageContent() {
 
 export default function MessagesPage() {
     return (
-        <SessionKeyProvider>
-            <MessagingClientProvider>
-                <MessagesPageContent />
-            </MessagingClientProvider>
-        </SessionKeyProvider>
+        <ErrorBoundary>
+            <SessionKeyProvider>
+                <MessagingClientProvider>
+                    <MessagesPageContent />
+                </MessagingClientProvider>
+            </SessionKeyProvider>
+        </ErrorBoundary>
     );
 }

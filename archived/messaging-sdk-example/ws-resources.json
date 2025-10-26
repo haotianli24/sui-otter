@@ -1,0 +1,7 @@
+{
+  "routes": {
+    "/*": "/index.html"
+  },
+  "site_name": "Messaging SDK Example App",
+  "object_id": "0x855b7f15a48f2f169c449490ba38e744cc8c44d1d29739615435fd988a3786fe"
+}

@@ -6,6 +6,7 @@ import StreamPage from './pages/StreamPage';
 import DiscoverPage from './pages/DiscoverPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const router = createBrowserRouter([
     {
@@ -15,30 +16,37 @@ export const router = createBrowserRouter([
     {
         path: '/',
         element: <MainLayout />,
+        errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
         children: [
             {
                 path: 'messages',
                 element: <MessagesPage />,
+                errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
             },
             {
                 path: 'groups',
                 element: <GroupsPage />,
+                errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
             },
             {
                 path: 'stream',
                 element: <StreamPage />,
+                errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
             },
             {
                 path: 'discover',
                 element: <DiscoverPage />,
+                errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
             },
             {
                 path: 'profile',
                 element: <ProfilePage />,
+                errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
             },
             {
                 path: 'settings',
                 element: <SettingsPage />,
+                errorElement: <ErrorBoundary><div>Error in layout</div></ErrorBoundary>,
             },
         ],
     },
