@@ -31,12 +31,12 @@ export function EmptyMessages() {
   return (
     <div className="flex-1 flex items-center justify-center bg-background p-6">
       <div className="text-center max-w-lg space-y-6">
-        <div className="space-y-3">
+        <div className="space-y-4">
           <MessageSquare className="h-20 w-20 mx-auto text-muted-foreground/40" />
-          <h3 className="text-xl font-semibold text-foreground">
+          <h3 className="section-heading">
             {hasChannels ? "No messages selected" : "No messages yet"}
           </h3>
-          <p className="text-muted-foreground">
+          <p className="muted-text">
             {hasChannels
               ? "Select a conversation from the sidebar to start chatting."
               : "Start a conversation by creating a new message channel with another user."
@@ -60,7 +60,7 @@ export function EmptyMessages() {
               <div className="w-full border rounded-lg p-6 text-left bg-card shadow-sm">
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="recipient" className="text-sm font-medium text-foreground">
+                    <label htmlFor="recipient" className="form-label">
                       Recipient Wallet Address
                     </label>
                     <Input
@@ -70,7 +70,7 @@ export function EmptyMessages() {
                       onChange={(e) => setRecipientAddress(e.target.value)}
                       className="mt-2"
                     />
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="small-text mt-2">
                       Enter the Sui wallet address of the recipient to start a direct message.
                     </p>
                   </div>
@@ -100,7 +100,7 @@ export function EmptyMessages() {
 
         {!isReady && (
           <div className="space-y-3">
-            <p className="text-muted-foreground">Initialize messaging to start chatting.</p>
+            <p className="muted-text">Initialize messaging to start chatting.</p>
             <Button
               variant="outline"
               size="sm"
