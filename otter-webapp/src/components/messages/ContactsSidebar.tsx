@@ -45,11 +45,11 @@ export default function ContactsSidebar() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h3 className="card-heading">Contacts</h3>
+      <div className="px-6 py-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Contacts</h3>
         <button
           className={cn(
-            "small-text px-3 py-1 border rounded hover:bg-accent transition-smooth",
+            "text-sm px-3 py-1.5 border border-border rounded-md hover:bg-accent transition-colors",
             (!isReady || isLoading) && "opacity-50 cursor-not-allowed"
           )}
           onClick={refreshChannels}
@@ -59,35 +59,38 @@ export default function ContactsSidebar() {
         </button>
       </div>
 
-      {/* New DM inline box */}
-      <div className="p-4 border-b border-border space-y-3">
-        <label htmlFor="new-dm" className="small-text">Start a new DM (wallet address)</label>
-        <div className="flex gap-2">
+      {/* New DM section */}
+      <div className="px-6 py-4 space-y-3">
+        <label htmlFor="new-dm" className="text-sm font-medium text-foreground">Start a new DM</label>
+        <div className="space-y-2">
           <input
             id="new-dm"
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
-            placeholder="0x..."
-            className="form-input flex-1"
+            placeholder="Enter wallet address (0x...)"
+            className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
             disabled={!isReady || isInitializing}
           />
           <button
             onClick={onCreate}
             disabled={!recipient.trim() || creating || !isReady || isInitializing}
             className={cn(
-              "small-text px-3 py-1 border rounded bg-card hover:bg-accent transition-smooth",
+              "w-full text-sm px-3 py-2 border border-border rounded-md bg-card hover:bg-accent transition-colors",
               (!recipient.trim() || creating || !isReady || isInitializing) && "opacity-50 cursor-not-allowed"
             )}
           >
-            {creating ? "Creating" : "Create"}
+            {creating ? "Creating..." : "Create Channel"}
           </button>
         </div>
         {!isReady && (
-          <p className="small-text">Initialize messaging to start a new DM.</p>
+          <p className="text-xs text-muted-foreground">Initialize messaging to start a new DM.</p>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      {/* Separator bar */}
+      <div className="border-t border-border/50"></div>
+
+      <div className="flex-1 overflow-y-auto scrollbar-none">
         {!isReady ? (
           <div className="p-6 space-y-4">
             <button
@@ -170,20 +173,20 @@ function ChannelItem({ channel, currentAccount }: ChannelItemProps) {
 
   return (
     <button
-      className="w-full text-left p-4 border-b border-border hover:bg-accent transition-smooth"
+      className="w-full text-left px-6 py-3 hover:bg-accent/50 transition-colors border-b border-border/50 last:border-b-0"
       onClick={() => {
         window.location.hash = channel.id;
       }}
     >
-      <div className="card-heading truncate">
+      <div className="font-medium text-foreground truncate">
         {otherMember ? `Chat with ${displayName}` : 'Group Chat'}
       </div>
       {channel.lastMessage ? (
-        <div className="small-text muted-text truncate mt-1">
+        <div className="text-sm text-muted-foreground truncate mt-1">
           {channel.lastMessage.content.length > 50 ? `${channel.lastMessage.content.slice(0, 50)}…` : channel.lastMessage.content}
         </div>
       ) : (
-        <div className="small-text muted-text mt-1">No messages yet</div>
+        <div className="text-sm text-muted-foreground mt-1">No messages yet</div>
       )}
     </button>
   );

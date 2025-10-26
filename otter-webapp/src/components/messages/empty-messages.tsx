@@ -57,7 +57,7 @@ export function EmptyMessages() {
             </Button>
 
             {showRecipientBox && (
-              <div className="w-full border rounded-lg p-6 text-left bg-card shadow-sm">
+              <div className="w-full p-6 text-left">
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="recipient" className="form-label">

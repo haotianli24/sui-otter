@@ -58,7 +58,7 @@ function MessagesPageContent() {
                     <div className="flex-1 flex min-h-0 -m-6">
                         {/* Contacts sidebar */}
                         <aside className="w-80 border-r border-border bg-card">
-                            <div className="p-6 border-b border-border">
+                            <div className="p-6">
                                 <h1 className="page-heading">Messages</h1>
                                 <p className="page-subtitle">Connect and chat with others</p>
                             </div>

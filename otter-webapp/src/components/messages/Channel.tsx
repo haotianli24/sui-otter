@@ -22,7 +22,6 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isLoadingOlderRef = useRef(false);
-    const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
     const [profilePopup, setProfilePopup] = useState<{
         isOpen: boolean;
         address: string;
@@ -49,11 +48,13 @@ export function Channel({ channelId, onBack }: ChannelProps) {
     // Fetch channel and messages on mount
     useEffect(() => {
         if (isReady && channelId) {
-            // Reset scroll state when channel changes
-            setIsUserScrolledUp(false);
-
             getChannelById(channelId).then(() => {
-                fetchMessages(channelId);
+                fetchMessages(channelId).then(() => {
+                    // Scroll to bottom when messages first load
+                    setTimeout(() => {
+                        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                });
             });
 
             // Auto-refresh messages every 10 seconds (only for the current channel)
@@ -67,33 +68,9 @@ export function Channel({ channelId, onBack }: ChannelProps) {
         }
     }, [isReady, channelId, getChannelById, fetchMessages]);
 
-    // Auto-scroll to bottom when new messages arrive (only if user is at bottom)
-    useEffect(() => {
-        // Don't scroll if we're loading older messages or if user has scrolled up
-        if (!isLoadingOlderRef.current && !isUserScrolledUp) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-        // Reset the flag after messages update
-        isLoadingOlderRef.current = false;
-    }, [messages, isUserScrolledUp]);
+    // Auto-scroll functionality removed
 
-    // Track scroll position to determine if user is reading older messages
-    const handleScroll = () => {
-        if (!messagesContainerRef.current) return;
-
-        const container = messagesContainerRef.current;
-        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-        setIsUserScrolledUp(!isAtBottom);
-    };
-
-    // Add scroll event listener
-    useEffect(() => {
-        const container = messagesContainerRef.current;
-        if (container) {
-            container.addEventListener('scroll', handleScroll);
-            return () => container.removeEventListener('scroll', handleScroll);
-        }
-    }, []);
+    // Scroll tracking removed
 
     const handleSendMessage = async (message: string, mediaFile?: File) => {
         if (!message.trim() && !mediaFile || isSendingMessage) {
@@ -182,7 +159,9 @@ export function Channel({ channelId, onBack }: ChannelProps) {
 
             {/* Messages Area */}
             <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0 bg-background relative">
-                <ZeroBackground />
+                <div className="absolute inset-0 overflow-hidden">
+                    <ZeroBackground />
+                </div>
                 <div
                     className="relative z-10"
                     onMouseMove={(e) => {
@@ -316,12 +295,7 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
 
             {/* Message content */}
             <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                <div
-                    className={`px-4 py-2 rounded-2xl backdrop-blur-md ${isCurrentUser
-                        ? 'bg-card/80 text-card-foreground border border-border/50'
-                        : 'bg-card/80 text-card-foreground border border-border/50'
-                        }`}
-                >
+                <div className="px-2 py-1">
                     <MessageWithMedia
                         content={message.text}
                         isOwn={isCurrentUser}
