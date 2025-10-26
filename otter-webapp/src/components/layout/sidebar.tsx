@@ -40,11 +40,6 @@ const navItems = [
         icon: Bot,
     },
     {
-        name: "Copy Trading",
-        href: "/copy-trading",
-        icon: TrendingUp,
-    },
-    {
         name: "Discover",
         href: "/discover",
         icon: Compass,
