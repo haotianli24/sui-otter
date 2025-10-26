@@ -128,3 +128,33 @@ public
 # Temporary folders
 tmp/
 temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Agent specific
+agent/*.log
+agent/agent_*.log
+agent/followed_traders.json
+agent/trade_history.json
+
+# Move build artifacts
+**/build/
+Move.lock
+
+# Sui keys and configs
+*.keystore
+*.yaml
+
+# Mac
+.DS_Store

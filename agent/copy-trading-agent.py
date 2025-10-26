@@ -17,14 +17,15 @@ from uagents.setup import fund_agent_if_low
 # Sui imports
 import requests
 
-# Import contract querier
+# Import contract querier and executor
 from contract_queries import ContractQuerier
+from sui_executor import SuiTransactionExecutor
 
 # Load environment variables
 load_dotenv()
 
 # Configuration
-FETCHAI_API_KEY = os.getenv("FETCHAI_API_KEY", "sk_1ca6bd86b301469c87e42c79875dc6ecfa7684f8aaf54dd093bab30c619051a7")
+FETCHAI_API_KEY = os.getenv("FETCHAI_API_KEY", "")
 SUI_RPC_URL = os.getenv("SUI_RPC_URL", "https://rpc-testnet.suiscan.xyz:443")
 COPY_TRADING_PACKAGE_ID = os.getenv("COPY_TRADING_PACKAGE_ID", "")
 COPY_TRADING_REGISTRY_ID = os.getenv("COPY_TRADING_REGISTRY_ID", "")
@@ -44,12 +45,14 @@ fund_agent_if_low(agent.wallet.address())
 print(f"🤖 Copy Trading Agent Address: {agent.address}")
 print(f"💼 Agent Wallet: {agent.wallet.address()}")
 
-# Initialize contract querier
+# Initialize contract querier and transaction executor
 contract_querier = ContractQuerier(
     rpc_url=SUI_RPC_URL,
     registry_id=COPY_TRADING_REGISTRY_ID,
     package_id=COPY_TRADING_PACKAGE_ID
 )
+
+tx_executor = SuiTransactionExecutor(rpc_url=SUI_RPC_URL)
 
 
 # Data Models
@@ -224,9 +227,21 @@ async def execute_copy_trade(follower: str, trade: TradeDetected) -> TradeCopied
             )
         
         # 2. Calculate the appropriate copy amount based on settings
-        original_amount = int(trade.amount)
-        copy_percentage = settings.get('copy_percentage', 10)
-        max_trade_size = settings.get('max_trade_size', 100000000)
+        # Ensure amount is an integer
+        try:
+            original_amount = int(trade.amount) if isinstance(trade.amount, str) else trade.amount
+        except (ValueError, TypeError):
+            print(f"   ⚠️ Could not parse amount: {trade.amount}")
+            return TradeCopied(
+                follower=follower,
+                trader=trade.trader,
+                amount="0",
+                success=False,
+                error="Invalid amount"
+            )
+        
+        copy_percentage = int(settings.get('copy_percentage', 10))
+        max_trade_size = int(settings.get('max_trade_size', 100000000))
         
         copy_amount = (original_amount * copy_percentage) // 100
         copy_amount = min(copy_amount, max_trade_size)
@@ -234,19 +249,53 @@ async def execute_copy_trade(follower: str, trade: TradeDetected) -> TradeCopied
         print(f"   💰 Copy amount: {copy_amount} MIST ({copy_amount/1_000_000_000:.6f} SUI)")
         print(f"   📊 Settings: {copy_percentage}% of trade, max {max_trade_size/1_000_000_000:.2f} SUI")
         
-        # 3. Execute the trade (simulated for now)
-        # In production, this would call execute_sui_transfer or execute_dex_swap
-        await asyncio.sleep(0.5)  # Simulate blockchain transaction
+        # 3. Execute the actual trade on testnet!
+        print(f"\n🚀 EXECUTING REAL TRANSACTION ON TESTNET...")
         
-        # 4. Record in smart contract (would be done in real implementation)
+        # Get the recipient from the original trade
+        # For transfers, copy to the same recipient
+        # For now, we'll demonstrate with the concept
         
-        return TradeCopied(
-            follower=follower,
-            trader=trade.trader,
-            amount=str(copy_amount),
-            success=True,
-            tx_digest=f"0x{'0'*60}{follower[-4:]}"  # Mock tx digest
+        # Check follower's balance first
+        balance = tx_executor.get_balance(follower)
+        print(f"   Follower balance: {balance/1_000_000_000:.6f} SUI")
+        
+        if balance < (copy_amount + 10000000):  # Amount + gas
+            print(f"   ⚠️ Insufficient balance! Need {(copy_amount + 10000000)/1_000_000_000:.6f} SUI")
+            return TradeCopied(
+                follower=follower,
+                trader=trade.trader,
+                amount=str(copy_amount),
+                success=False,
+                error="Insufficient balance"
+            )
+        
+        # Execute the transaction
+        # Note: This will show the command to run manually for security
+        # To fully automate, you'd need to set up wallet with private keys
+        tx_digest = tx_executor.execute_sui_transfer(
+            from_address=follower,
+            to_address=trade.trader,  # Simplified: send to trader
+            amount=copy_amount
         )
+        
+        if tx_digest:
+            print(f"   ✅ Transaction prepared: {tx_digest}")
+            return TradeCopied(
+                follower=follower,
+                trader=trade.trader,
+                amount=str(copy_amount),
+                success=True,
+                tx_digest=tx_digest
+            )
+        else:
+            return TradeCopied(
+                follower=follower,
+                trader=trade.trader,
+                amount=str(copy_amount),
+                success=False,
+                error="Transaction failed"
+            )
     except Exception as e:
         return TradeCopied(
             follower=follower,

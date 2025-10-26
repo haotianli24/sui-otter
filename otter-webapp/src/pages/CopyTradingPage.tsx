@@ -7,7 +7,9 @@ import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@
 import { 
     buildFollowTraderTx, 
     buildUnfollowTraderTx, 
-    getFollowedTraders
+    getFollowedTraders,
+    getCopySettings,
+    buildUpdateSettingsTx
 } from "@/lib/copy-trading-contract";
 
 interface Trader {
@@ -42,6 +44,21 @@ export default function CopyTradingPage() {
     const [isInitialized, setIsInitialized] = useState(false);
     const [syncMessage, setSyncMessage] = useState<string | null>(null);
     const [showMigrationBanner, setShowMigrationBanner] = useState(false);
+    
+    // Settings modal state
+    const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+    const [selectedTrader, setSelectedTrader] = useState<string | null>(null);
+    const [traderSettings, setTraderSettings] = useState<Record<string, {
+        copyPercentage: number;
+        maxTradeSize: string;
+        autoCopyEnabled: boolean;
+    }>>({});
+    const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
+    
+    // Settings form state
+    const [settingsCopyPercentage, setSettingsCopyPercentage] = useState(10);
+    const [settingsMaxTradeSize, setSettingsMaxTradeSize] = useState("100000000");
+    const [settingsAutoCopyEnabled, setSettingsAutoCopyEnabled] = useState(true);
     
     // Load followed traders from smart contract on mount
     useEffect(() => {
@@ -133,6 +150,47 @@ export default function CopyTradingPage() {
         
         localStorage.setItem('tradersList', JSON.stringify(traders));
     }, [traders, isInitialized]);
+    
+    // Load settings for each followed trader
+    useEffect(() => {
+        const loadSettings = async () => {
+            if (!currentAccount?.address || followedTraders.size === 0) return;
+            
+            const settingsMap: Record<string, {
+                copyPercentage: number;
+                maxTradeSize: string;
+                autoCopyEnabled: boolean;
+            }> = {};
+            
+            for (const traderAddress of Array.from(followedTraders)) {
+                try {
+                    const settings = await getCopySettings(suiClient, currentAccount.address, traderAddress);
+                    if (settings) {
+                        settingsMap[traderAddress] = settings;
+                    } else {
+                        // Default settings if not found
+                        settingsMap[traderAddress] = {
+                            copyPercentage: 10,
+                            maxTradeSize: "100000000",
+                            autoCopyEnabled: true
+                        };
+                    }
+                } catch (error) {
+                    console.error(`Error loading settings for ${traderAddress}:`, error);
+                    // Use defaults on error
+                    settingsMap[traderAddress] = {
+                        copyPercentage: 10,
+                        maxTradeSize: "100000000",
+                        autoCopyEnabled: true
+                    };
+                }
+            }
+            
+            setTraderSettings(settingsMap);
+        };
+        
+        loadSettings();
+    }, [currentAccount?.address, followedTraders, suiClient]);
     
     // Load trade history on mount and periodically (wallet-specific)
     useEffect(() => {
@@ -242,6 +300,70 @@ export default function CopyTradingPage() {
             console.error('Error building transaction:', error);
             alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
             setIsFollowing(null);
+        }
+    };
+    
+    // Open settings modal
+    const handleOpenSettings = (traderAddress: string) => {
+        setSelectedTrader(traderAddress);
+        const settings = traderSettings[traderAddress] || {
+            copyPercentage: 10,
+            maxTradeSize: "100000000",
+            autoCopyEnabled: true
+        };
+        setSettingsCopyPercentage(settings.copyPercentage);
+        setSettingsMaxTradeSize(settings.maxTradeSize);
+        setSettingsAutoCopyEnabled(settings.autoCopyEnabled);
+        setSettingsModalOpen(true);
+    };
+    
+    // Update settings on blockchain
+    const handleUpdateSettings = async () => {
+        if (!currentAccount?.address || !selectedTrader) return;
+        
+        setIsUpdatingSettings(true);
+        
+        try {
+            const tx = buildUpdateSettingsTx(
+                selectedTrader,
+                settingsCopyPercentage,
+                settingsMaxTradeSize,
+                settingsAutoCopyEnabled
+            );
+            
+            console.log(`📝 Updating settings for trader ${selectedTrader}...`);
+            
+            signAndExecute(
+                { transaction: tx },
+                {
+                    onSuccess: (result) => {
+                        console.log('✅ Settings updated successfully:', result.digest);
+                        
+                        // Update local state
+                        setTraderSettings(prev => ({
+                            ...prev,
+                            [selectedTrader]: {
+                                copyPercentage: settingsCopyPercentage,
+                                maxTradeSize: settingsMaxTradeSize,
+                                autoCopyEnabled: settingsAutoCopyEnabled
+                            }
+                        }));
+                        
+                        setIsUpdatingSettings(false);
+                        setSettingsModalOpen(false);
+                        setSelectedTrader(null);
+                    },
+                    onError: (error) => {
+                        console.error('❌ Failed to update settings:', error);
+                        alert(`Failed to update settings: ${error.message}`);
+                        setIsUpdatingSettings(false);
+                    }
+                }
+            );
+        } catch (error) {
+            console.error('Error building settings transaction:', error);
+            alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setIsUpdatingSettings(false);
         }
     };
     
@@ -652,16 +774,36 @@ export default function CopyTradingPage() {
                                                 <span className="font-mono text-sm font-medium">
                                                     {formatAddress(trader.address)}
                                                 </span>
-                                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                                                    Auto-copy ON
-                                                </Badge>
+                                                {traderSettings[trader.address] && (
+                                                    <Badge 
+                                                        variant="outline" 
+                                                        className={`text-xs ${
+                                                            traderSettings[trader.address].autoCopyEnabled 
+                                                                ? 'bg-green-50 text-green-700 border-green-200' 
+                                                                : 'bg-gray-50 text-gray-700 border-gray-200'
+                                                        }`}
+                                                    >
+                                                        Auto-copy {traderSettings[trader.address].autoCopyEnabled ? 'ON' : 'OFF'}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <div className="text-sm text-muted-foreground">
-                                                Copy: 10% of position size • Max: 100 SUI
+                                                {traderSettings[trader.address] ? (
+                                                    <>
+                                                        Copy: {traderSettings[trader.address].copyPercentage}% of position size • 
+                                                        Max: {(parseInt(traderSettings[trader.address].maxTradeSize) / 1_000_000_000).toFixed(2)} SUI
+                                                    </>
+                                                ) : (
+                                                    'Loading settings...'
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button variant="outline" size="sm">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => handleOpenSettings(trader.address)}
+                                            >
                                                 <Settings className="h-3 w-3 mr-1" />
                                                 Settings
                                             </Button>
@@ -754,6 +896,118 @@ export default function CopyTradingPage() {
                     </div>
                 )}
             </div>
+            
+            {/* Settings Modal */}
+            {settingsModalOpen && selectedTrader && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-card border border-border rounded-lg max-w-md w-full p-6 shadow-lg">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold">Copy Trading Settings</h2>
+                            <button
+                                onClick={() => setSettingsModalOpen(false)}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        
+                        <div className="mb-4 p-3 bg-muted rounded-md">
+                            <div className="text-sm text-muted-foreground mb-1">Trader Address</div>
+                            <div className="font-mono text-sm">{formatAddress(selectedTrader)}</div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {/* Auto-copy toggle */}
+                            <div className="flex items-center justify-between p-3 border border-border rounded-lg">
+                                <div>
+                                    <div className="font-medium">Auto-copy Trades</div>
+                                    <div className="text-sm text-muted-foreground">
+                                        Automatically copy this trader's transactions
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSettingsAutoCopyEnabled(!settingsAutoCopyEnabled)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                        settingsAutoCopyEnabled ? 'bg-green-600' : 'bg-gray-300'
+                                    }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                            settingsAutoCopyEnabled ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                    />
+                                </button>
+                            </div>
+                            
+                            {/* Copy percentage */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Copy Percentage
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={settingsCopyPercentage}
+                                        onChange={(e) => setSettingsCopyPercentage(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                                        className="flex-1"
+                                    />
+                                    <span className="text-sm text-muted-foreground">%</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    Copy {settingsCopyPercentage}% of each trade's position size
+                                </div>
+                            </div>
+                            
+                            {/* Max trade size */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Max Trade Size (SUI)
+                                </label>
+                                <Input
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={(parseInt(settingsMaxTradeSize) / 1_000_000_000).toFixed(2)}
+                                    onChange={(e) => {
+                                        const sui = parseFloat(e.target.value) || 0.1;
+                                        setSettingsMaxTradeSize(Math.floor(sui * 1_000_000_000).toString());
+                                    }}
+                                />
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    Maximum SUI amount per copied trade
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-2 mt-6">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setSettingsModalOpen(false)}
+                                disabled={isUpdatingSettings}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1"
+                                onClick={handleUpdateSettings}
+                                disabled={isUpdatingSettings}
+                            >
+                                {isUpdatingSettings ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Settings'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
