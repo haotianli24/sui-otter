@@ -31,19 +31,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             >
                 <div
                     className={cn(
-                        "max-w-[450px] p-4 border-2",
+                        "max-w-[450px] p-4 border-2 rounded-2xl",
                         isSent
-                            ? "bg-card/80 border-border/50 backdrop-blur-md"
-                            : "bg-card/80 border-border/50 backdrop-blur-md"
+                            ? "bg-primary/10 border-border/50 backdrop-blur-md"
+                            : "bg-secondary/80 border-border/50 backdrop-blur-md"
                     )}
-                    style={{
-                        backgroundColor: isSent
-                            ? 'hsl(var(--foreground))'
-                            : 'hsl(var(--card))',
-                        color: isSent
-                            ? 'hsl(var(--background))'
-                            : 'hsl(var(--card-foreground))'
-                    }}
                 >
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">📊</span>
@@ -110,10 +102,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             >
                 <div
                     className={cn(
-                        "max-w-[350px] p-4 border-2",
+                        "max-w-[350px] p-4 border-2 rounded-2xl",
                         isSent
                             ? "bg-primary/10 border-primary"
-                            : "bg-card border-border"
+                            : "bg-secondary/80 border-border"
                     )}
                 >
                     <div className="flex items-center gap-2 mb-2">
@@ -143,19 +135,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <div className="max-w-[450px]">
                 <div
                     className={cn(
-                        "px-4 py-2",
+                        "px-4 py-2 rounded-2xl",
                         isSent
-                            ? "bg-card/80 text-card-foreground border border-border/50 backdrop-blur-md"
-                            : "bg-card/80 text-card-foreground border border-border/50 backdrop-blur-md"
+                            ? "bg-primary/10 text-foreground border border-border/50 backdrop-blur-md"
+                            : "bg-secondary/80 text-foreground border border-border/50 backdrop-blur-md"
                     )}
-                    style={{
-                        backgroundColor: isSent
-                            ? 'hsl(var(--foreground))'
-                            : 'hsl(var(--card))',
-                        color: isSent
-                            ? 'hsl(var(--background))'
-                            : 'hsl(var(--card-foreground))'
-                    }}
                 >
                     <p className="text-sm break-words">{message.content}</p>
                     <div

@@ -6,7 +6,7 @@ import { graphql } from "@mysten/sui/graphql/schemas/2024.4";
 import { getFileCategory } from '../lib/walrus-service';
 import { useMessagingClient } from '../providers/MessagingClientProvider';
 
-const COMMUNITY_PACKAGE_ID = '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8';
+const COMMUNITY_PACKAGE_ID = '0x525a9ee83a400d5a95c79ad0bc9f09a7bc6a0d15eecac2caa999c693b8db50a2';
 
 export interface GroupMessage {
   id: string;

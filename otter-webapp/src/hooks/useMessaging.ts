@@ -49,7 +49,7 @@ export const useMessaging = () => {
       // Step 1: Build and execute channel creation
       const channelTx = flow.build();
       const { digest } = await signAndExecute({
-        transaction: channelTx,
+        transaction: channelTx as any,
       });
 
       // Wait for transaction and get channel ID
@@ -73,7 +73,7 @@ export const useMessaging = () => {
       });
 
       const { digest: finalDigest } = await signAndExecute({
-        transaction: attachKeyTx,
+        transaction: attachKeyTx as any,
       });
 
       // Wait for final transaction
@@ -404,7 +404,7 @@ export const useMessaging = () => {
         finalMessage,
         encryptedKey,
       );
-      await sendMessageTxBuilder(tx);
+      await sendMessageTxBuilder(tx as any);
 
       const { digest } = await signAndExecute({ transaction: tx });
 

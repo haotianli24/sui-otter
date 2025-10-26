@@ -31,7 +31,39 @@ interface MessageContext {
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 6000; // 6 seconds between requests
 
-function generateFallbackExplanation(txData: TransactionData): string {
+// Simple price cache for SUI
+let suiPriceCache: { price: number; timestamp: number } | null = null;
+const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function getSUIPrice(): Promise<number | null> {
+    try {
+        // Check cache first
+        if (suiPriceCache && Date.now() - suiPriceCache.timestamp < PRICE_CACHE_DURATION) {
+            return suiPriceCache.price;
+        }
+
+        // Fetch from CoinGecko API
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=sui&vs_currencies=usd');
+        if (!response.ok) {
+            throw new Error('Failed to fetch price');
+        }
+
+        const data = await response.json();
+        const price = data.sui?.usd;
+        
+        if (price) {
+            suiPriceCache = { price, timestamp: Date.now() };
+            return price;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error fetching SUI price:', error);
+        return null;
+    }
+}
+
+async function generateFallbackExplanation(txData: TransactionData): Promise<string> {
     const operations = txData.operations || [];
     const moveCalls = txData.moveCalls || [];
 
@@ -51,7 +83,17 @@ function generateFallbackExplanation(txData: TransactionData): string {
     if (transferOps.length > 0) {
         const hasAmount = transferOps.some(op => op.amount);
         if (hasAmount) {
-            mainAction = "transferred tokens";
+            // Extract specific transfer amounts
+            const transferAmounts = transferOps
+                .filter(op => op.amount && op.asset)
+                .map(op => `${op.amount} ${op.asset}`)
+                .join(', ');
+            
+            if (transferAmounts) {
+                mainAction = `transferred ${transferAmounts}`;
+            } else {
+                mainAction = "transferred tokens";
+            }
         } else {
             mainAction = "transferred objects";
         }
@@ -82,6 +124,35 @@ function generateFallbackExplanation(txData: TransactionData): string {
     const gasAmount = parseFloat(txData.gasUsed);
     const gasText = gasAmount > 0.001 ? `${txData.gasUsed} SUI` : "minimal gas";
 
+    // Build a more detailed explanation for transfers
+    if (transferOps.length > 0 && transferOps.some(op => op.amount)) {
+        const transferOpsWithAmounts = transferOps.filter(op => op.amount && op.asset);
+        
+        if (transferOpsWithAmounts.length > 0) {
+            const transfer = transferOpsWithAmounts[0]; // Take the first transfer
+            const amount = transfer.amount;
+            const asset = transfer.asset;
+            const recipient = transfer.to;
+            
+            // Format recipient address (show first 6 and last 4 characters)
+            const recipientShort = recipient && typeof recipient === "string" 
+                ? `${recipient.slice(0, 6)}...${recipient.slice(-4)}` 
+                : "unknown address";
+            
+            // Get dollar value for SUI transfers
+            let dollarValue = "";
+            if (asset === "SUI" && amount) {
+                const suiPrice = await getSUIPrice();
+                if (suiPrice) {
+                    const dollarAmount = (parseFloat(amount) * suiPrice).toFixed(2);
+                    dollarValue = `$${dollarAmount}`;
+                }
+            }
+            
+            return `User transferred ${amount} ${asset}${dollarValue ? ` (${dollarValue})` : ''} to ${recipientShort}, paying ${gasText} in transaction fees. Transaction completed successfully.`;
+        }
+    }
+
     return `User ${mainAction} on ${protocol}, paying ${gasText} in transaction fees. Transaction completed successfully.`;
 }
 
@@ -91,14 +162,14 @@ export async function generateTransactionExplanation(txData: TransactionData, _c
         const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
         if (!apiKey) {
             console.log("No Gemini API key, using fallback");
-            return generateFallbackExplanation(txData);
+            return await generateFallbackExplanation(txData);
         }
 
         // Simple rate limiting
         const now = Date.now();
         if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
             console.log("Rate limiting: using fallback explanation");
-            return generateFallbackExplanation(txData);
+            return await generateFallbackExplanation(txData);
         }
         lastRequestTime = now;
 
@@ -127,10 +198,10 @@ export async function generateTransactionExplanation(txData: TransactionData, _c
         // For now, use a simple fetch to a hypothetical API endpoint
         // In a real implementation, you would call the Gemini API here
         console.log("Gemini API integration not yet implemented, using fallback");
-        return generateFallbackExplanation(txData);
+        return await generateFallbackExplanation(txData);
     } catch (error) {
         console.error("Error generating explanation:", error);
-        return generateFallbackExplanation(txData);
+        return await generateFallbackExplanation(txData);
     }
 }
 

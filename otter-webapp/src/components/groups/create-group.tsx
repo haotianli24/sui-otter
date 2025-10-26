@@ -21,8 +21,9 @@ export function CreateGroup({
     const [name, setName] = useState("");
     const [price, setPrice] = useState("");
     const [description, setDescription] = useState("");
-    const [type, setType] = useState<"free" | "paid">("free");
+    const [type, setType] = useState<"free" | "paid" | "dao">("free");
     const [maxMembers, setMaxMembers] = useState(50);
+    const [tokenThreshold, setTokenThreshold] = useState("");
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const {
@@ -31,7 +32,7 @@ export function CreateGroup({
     } = useSignAndExecuteTransaction();
 
     // Registry object ID for the community contract
-    const registryId = '0x7ece486d159e8b2a8d723552b218ef99a21d3555b199173d2dd49ce2d13b14eb';
+    const registryId = '0x5e6a59cad716ddedd7327a18c5d180e7ceed98fd613422987d313924d0b31916';
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
@@ -51,6 +52,17 @@ export function CreateGroup({
                 const priceValue = parseFloat(price);
                 if (isNaN(priceValue) || priceValue < 0.01 || priceValue > 1000) {
                     newErrors.price = "Price must be between 0.01 and 1000 SUI";
+                }
+            }
+        }
+
+        if (type === "dao") {
+            if (!tokenThreshold.trim()) {
+                newErrors.tokenThreshold = "Token threshold is required for DAO communities";
+            } else {
+                const thresholdValue = parseFloat(tokenThreshold);
+                if (isNaN(thresholdValue) || thresholdValue < 0.01 || thresholdValue > 1000000) {
+                    newErrors.tokenThreshold = "Token threshold must be between 0.01 and 1,000,000 SUI";
                 }
             }
         }
@@ -79,21 +91,40 @@ export function CreateGroup({
 
         const tx = new Transaction();
 
-        // Convert SUI to MIST (1 SUI = 1,000,000,000 MIST)
-        const priceInMist = type === 'free' ? 0 : Math.floor(parseFloat(price) * 1_000_000_000);
+        if (type === "dao") {
+            // Convert SUI to MIST (1 SUI = 1,000,000,000 MIST)
+            const thresholdInMist = Math.floor(parseFloat(tokenThreshold) * 1_000_000_000);
 
-        tx.moveCall({
-            package: '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8',
-            module: 'community',
-            function: 'create_community',
-            arguments: [
-                tx.object(registryId),
-                tx.pure.string(name),
-                tx.pure.string(description),
-                tx.pure.u64(priceInMist),
-                tx.pure.u64(maxMembers),
-            ],
-        });
+            tx.moveCall({
+                package: '0x525a9ee83a400d5a95c79ad0bc9f09a7bc6a0d15eecac2caa999c693b8db50a2',
+                module: 'community',
+                function: 'create_dao_community',
+                arguments: [
+                    tx.object(registryId),
+                    tx.pure.string(name),
+                    tx.pure.string(description),
+                    tx.pure.string("0x2::sui::SUI"), // SUI token type
+                    tx.pure.u64(thresholdInMist),
+                    tx.pure.u64(maxMembers),
+                ],
+            });
+        } else {
+            // Convert SUI to MIST (1 SUI = 1,000,000,000 MIST)
+            const priceInMist = type === 'free' ? 0 : Math.floor(parseFloat(price) * 1_000_000_000);
+
+            tx.moveCall({
+                package: '0x525a9ee83a400d5a95c79ad0bc9f09a7bc6a0d15eecac2caa999c693b8db50a2',
+                module: 'community',
+                function: 'create_community',
+                arguments: [
+                    tx.object(registryId),
+                    tx.pure.string(name),
+                    tx.pure.string(description),
+                    tx.pure.u64(priceInMist),
+                    tx.pure.u64(maxMembers),
+                ],
+            });
+        }
 
         signAndExecute(
             {
@@ -159,13 +190,14 @@ export function CreateGroup({
                     {/* Community Type */}
                     <div className="space-y-2">
                         <Label htmlFor="type">Type</Label>
-                        <Select value={type} onValueChange={(value: "free" | "paid") => setType(value)}>
-                            <SelectTrigger>
+                        <Select value={type} onValueChange={(value: "free" | "paid" | "dao") => setType(value)}>
+                            <SelectTrigger className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="free">Free</SelectItem>
-                                <SelectItem value="paid">Paid</SelectItem>
+                            <SelectContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg">
+                                <SelectItem value="free" className="bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800">Free</SelectItem>
+                                <SelectItem value="paid" className="bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800">Paid</SelectItem>
+                                <SelectItem value="dao" className="bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800">DAO (Token-Gated)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -204,6 +236,40 @@ export function CreateGroup({
                         </div>
                     )}
 
+                    {/* Token Threshold (only for DAO groups) */}
+                    {type === "dao" && (
+                        <div className="space-y-2">
+                            <Label htmlFor="tokenThreshold">Minimum SUI Required</Label>
+                            <Input
+                                id="tokenThreshold"
+                                type="number"
+                                placeholder="100"
+                                value={tokenThreshold}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                    const value = e.target.value;
+                                    // Allow empty string, numbers, and one decimal point
+                                    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                                        setTokenThreshold(value);
+                                    }
+                                }}
+                                className={errors.tokenThreshold ? "border-destructive" : ""}
+                                min="0.01"
+                                max="1000000"
+                                step="0.01"
+                            />
+                            {errors.tokenThreshold && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{errors.tokenThreshold}</AlertDescription>
+                                </Alert>
+                            )}
+                            {tokenThreshold && !errors.tokenThreshold && (
+                                <p className="text-sm text-muted-foreground">
+                                    Users need at least {formatPrice(tokenThreshold)} SUI to join
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     {/* Max Members */}
                     <div className="space-y-2">
                         <Label htmlFor="maxMembers">Max Members</Label>
@@ -230,6 +296,7 @@ export function CreateGroup({
                             type="submit"
                             disabled={isPending || !currentAccount}
                             className="flex-1"
+                            variant="outline"
                         >
                             {isPending ? (
                                 <>

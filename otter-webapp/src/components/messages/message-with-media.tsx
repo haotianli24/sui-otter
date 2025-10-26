@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ImageIcon, Loader2, Eye, EyeOff, Video, FileText, File, Download } from "lucide-react";
+import { ImageIcon, Loader2, Eye, EyeOff, Download } from "lucide-react";
 import { detectTransactionHash } from "../../lib/transaction-detector";
 import TransactionEmbed from "../transaction/TransactionEmbed";
 import { Button } from "../ui/button";
@@ -34,16 +34,11 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
   const loadMediaFromWalrus = async (fileRef: { type: 'legacy' | 'new'; category?: 'image' | 'video' | 'document' | 'other'; blobId: string; filename?: string }) => {
     setIsLoadingMedia(true);
     setMediaError(false);
+    setFileMetadata(null); // Reset file metadata
+    setMediaUrl(null); // Reset media URL
 
     try {
       console.log('Loading media from Walrus:', fileRef);
-
-      // Set file metadata
-      setFileMetadata({
-        category: fileRef.category || 'image',
-        filename: fileRef.filename,
-        size: undefined // We don't have size info from the reference
-      });
 
       // Check if this is a temporary blob ID (starts with "temp_")
       if (fileRef.blobId.startsWith('temp_')) {
@@ -71,6 +66,11 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
         const url = await getFileUrl(fileRef.blobId);
         console.log('File found at:', url);
         setMediaUrl(url);
+        setFileMetadata({
+          category: fileRef.category || 'image',
+          filename: fileRef.filename,
+          size: undefined // We don't have size info from the reference
+        });
         setIsLoadingMedia(false);
         return;
       } catch (error) {
@@ -102,6 +102,11 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
               const retryUrl = await getFileUrl(fileRef.blobId);
               console.log(`File found with ${approach.name} at:`, retryUrl);
               setMediaUrl(retryUrl);
+              setFileMetadata({
+                category: fileRef.category || 'image',
+                filename: fileRef.filename,
+                size: undefined // We don't have size info from the reference
+              });
               setIsLoadingMedia(false);
             } catch (retryError) {
               console.warn(`${approach.name} failed:`, retryError);
@@ -200,7 +205,7 @@ export function MessageWithMedia({ content, isOwn, senderName, groupName }: Mess
         </div>
       )}
       {textContent && (
-        <p className={`text-sm ${isOwn ? 'text-primary-foreground' : 'text-foreground'} whitespace-pre-wrap break-words`}>
+        <p className={`text-sm whitespace-pre-wrap break-words`}>
           {textContent}
         </p>
       )}

@@ -88,8 +88,8 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
       <div className={`flex flex-col max-w-[70%] ${isOwn ? "items-end" : "items-start"}`}>
         <div
           className={`px-4 py-2 rounded-2xl backdrop-blur-md ${isOwn
-            ? "bg-muted/80"
-            : "bg-muted/80"
+            ? "bg-primary/10"
+            : "bg-secondary/80"
             }`}
         >
           <p className="text-sm whitespace-pre-wrap break-words">

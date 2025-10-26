@@ -3,7 +3,7 @@ import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/2024.4";
 
-const COMMUNITY_PACKAGE_ID = '0xbe3df18a07f298aa3bbfb58c611595ea201fa320408fb546700d3733eae862c8';
+const COMMUNITY_PACKAGE_ID = '0x525a9ee83a400d5a95c79ad0bc9f09a7bc6a0d15eecac2caa999c693b8db50a2';
 
 export interface Group {
   id: string;
@@ -243,7 +243,7 @@ export function useCommunityMembers(communityId: string) {
 
         // Try to get members from the CommunityRegistry first
         try {
-          const registryId = '0x7ece486d159e8b2a8d723552b218ef99a21d3555b199173d2dd49ce2d13b14eb';
+          const registryId = '0x5e6a59cad716ddedd7327a18c5d180e7ceed98fd613422987d313924d0b31916';
           const registryObject = await suiClient.getObject({
             id: registryId,
             options: {

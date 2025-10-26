@@ -242,12 +242,10 @@ export function Channel({ channelId, onBack }: ChannelProps) {
                     </div>
                 )}
 
-                <div className="p-6">
-                    <MessageInput
-                        onSend={handleSendMessage}
-                        disabled={isSendingMessage}
-                    />
-                </div>
+                <MessageInput
+                    onSend={handleSendMessage}
+                    disabled={isSendingMessage}
+                />
             </div>
 
             {/* User Profile Popup */}
@@ -295,7 +293,13 @@ function MessageItem({ message, isCurrentUser, onProfileClick, formatTimestamp }
 
             {/* Message content */}
             <div className={`flex flex-col max-w-[70%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                <div className="px-2 py-1">
+                <div 
+                    className={`px-4 py-2 rounded-2xl backdrop-blur-md border ${
+                        isCurrentUser 
+                            ? "bg-primary/10 border-primary/30" 
+                            : "bg-card/80 border-border/50"
+                    }`}
+                >
                     <MessageWithMedia
                         content={message.text}
                         isOwn={isCurrentUser}
