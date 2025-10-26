@@ -3,10 +3,12 @@
 import { Search, Moon, Sun } from "lucide-react";
 import { useTheme } from "../theme-provider";
 import { Button } from "@/components/ui/button";
-import { WalletConnection } from "@/components/wallet-connection";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import { useAuth } from "@/providers/AuthProvider";
 
 export function TopBar() {
   const { theme, setTheme } = useTheme();
+  const { address, logout } = useAuth();
 
   return (
     <div className="h-28 border-b border-border bg-card flex items-center justify-between px-6">
@@ -23,9 +25,18 @@ export function TopBar() {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-4">
-        {/* Wallet connection */}
-        <WalletConnection />
+      <div className="relative z-50 flex items-center gap-4">
+        {/* zkLogin */}
+        {!address ? (
+          <GoogleLoginButton />
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              {address.slice(0, 6)}...{address.slice(-4)}
+            </span>
+            <Button variant="outline" size="sm" onClick={logout}>Log out</Button>
+          </div>
+        )}
 
         {/* Theme toggle */}
         <Button

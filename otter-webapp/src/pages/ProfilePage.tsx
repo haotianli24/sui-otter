@@ -1,32 +1,59 @@
-import { useCurrentAccount } from "@mysten/dapp-kit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Copy, Mail, Globe } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
+import { gradientFromAddress } from "@/utils/gradient";
 
 export default function ProfilePage() {
-  const currentAccount = useCurrentAccount();
+  const { address } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
 
-  if (!currentAccount) {
+  const storageKey = useMemo(() => (address ? `profile:${address.toLowerCase()}` : null), [address]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setUsername(parsed.username ?? "");
+        setBio(parsed.bio ?? "");
+      } else {
+        setUsername("");
+        setBio("");
+      }
+    } catch {}
+  }, [storageKey]);
+
+  const saveProfile = () => {
+    if (!storageKey) return;
+    const payload = { username, bio };
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch {}
+  };
+
+  if (!address) {
     return (
       <div className="p-6">
         <h1 className="text-3xl font-bold mb-4">Profile</h1>
-        <p className="text-muted-foreground">Please connect your wallet to view your profile.</p>
+        <p className="text-muted-foreground">Please sign in with Google (zkLogin) to view and edit your profile.</p>
       </div>
     );
   }
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(currentAccount.address);
+    navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getInitials = (address: string) => {
-    return address.slice(0, 2).toUpperCase();
-  };
+  const initials = address.slice(2, 4).toUpperCase();
 
   return (
     <div className="p-6 space-y-6">
@@ -42,9 +69,9 @@ export default function ProfilePage() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src="" alt={currentAccount.address} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                {getInitials(currentAccount.address)}
+              <AvatarImage src="" alt={address} />
+              <AvatarFallback className="text-primary-foreground text-2xl" style={{ background: gradientFromAddress(address) }}>
+                {initials}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
@@ -57,7 +84,7 @@ export default function ProfilePage() {
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">Wallet Address</p>
             <div className="flex items-center justify-between gap-2">
-              <code className="text-sm font-mono break-all">{currentAccount.address}</code>
+              <code className="text-sm font-mono break-all">{address}</code>
               <Button
                 variant="outline"
                 size="sm"
@@ -87,25 +114,27 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Contact Information */}
+      {/* Profile Details */}
       <Card className="border border-border bg-card">
         <CardHeader>
-          <CardTitle>Contact Information</CardTitle>
+          <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <Mail className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="text-sm">Not set</p>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Username</label>
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username" />
           </div>
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-            <Globe className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Website</p>
-              <p className="text-sm">Not set</p>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Bio</label>
+            <textarea
+              className="w-full min-h-[96px] p-3 bg-muted/50 rounded-lg outline-none border border-input focus:ring-2 focus:ring-ring"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell others about you"
+            />
+          </div>
+          <div>
+            <Button onClick={saveProfile}>Save</Button>
           </div>
         </CardContent>
       </Card>
@@ -116,9 +145,7 @@ export default function ProfilePage() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Button variant="outline" className="w-full justify-start">
-            Edit Profile
-          </Button>
+          <Button variant="outline" className="w-full justify-start" onClick={saveProfile}>Save Profile</Button>
           <Button variant="outline" className="w-full justify-start">
             View Transaction History
           </Button>

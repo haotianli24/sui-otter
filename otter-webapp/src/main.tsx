@@ -11,6 +11,7 @@ import App from "./App.tsx";
 import { getFullnodeUrl } from "@mysten/sui/client";
 import { createNetworkConfig } from "@mysten/dapp-kit";
 import { SuiClient } from "@mysten/sui/client";
+import { AuthProvider } from "./providers/AuthProvider";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +40,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <QueryClientProvider client={queryClient}>
                 <SuiClientProvider createClient={createClient} networks={networkConfig} defaultNetwork="testnet">
                     <WalletProvider autoConnect>
-                        <App />
+                        <AuthProvider>
+                            <App />
+                        </AuthProvider>
                     </WalletProvider>
                 </SuiClientProvider>
             </QueryClientProvider>
