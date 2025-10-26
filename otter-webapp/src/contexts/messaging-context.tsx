@@ -1,11 +1,31 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useWallets } from '@mysten/dapp-kit';
-import { MessagingService, Channel, Message } from '@/lib/messaging-service';
+import React, { createContext, useContext } from 'react';
+import { useMessaging as useMessagingHook } from '@/hooks/useMessaging';
+import { useSessionKey } from '@/providers/SessionKeyProvider';
+import { DecryptedChannelObject, DecryptMessageResult } from '@mysten/messaging';
+
+// Legacy interface for backwards compatibility with existing components
+interface Message {
+  id: string;
+  content: string;
+  sender: string;
+  timestamp: number;
+  channelId: string;
+}
+
+interface Channel {
+  id: string;
+  members: string[];
+  createdAt: number;
+  lastMessage?: {
+    content: string;
+    sender: string;
+    timestamp: number;
+  };
+}
 
 interface MessagingContextType {
-  messagingService: MessagingService | null;
   channels: Channel[];
   messages: Record<string, Message[]>;
   currentUser: string | null;
@@ -15,165 +35,83 @@ interface MessagingContextType {
   sendMessage: (channelId: string, content: string) => Promise<void>;
   loadMessages: (channelId: string) => Promise<void>;
   refreshChannels: () => Promise<void>;
+  // New SDK-specific properties
+  isReady: boolean;
+  initializeSession: () => Promise<void>;
+  isInitializing: boolean;
+  rawChannels: DecryptedChannelObject[];
+  rawMessages: DecryptMessageResult[];
 }
 
 const MessagingContext = createContext<MessagingContextType | undefined>(undefined);
 
 export function MessagingProvider({ children }: { children: React.ReactNode }) {
-  // Hardcoded wallet for now
-  const HARDCODED_WALLET = "0x5fd6818ea960ecf361a15ecb3134bda2600e4138f4a82b1939fdde41530e8a6d";
-  
-  const [messagingService, setMessagingService] = useState<MessagingService | null>(null);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
-  const [currentUser, setCurrentUser] = useState<string | null>(HARDCODED_WALLET);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const sdk = useMessagingHook();
+  const { initializeManually, isInitializing } = useSessionKey();
 
-  // Initialize messaging service with hardcoded wallet
-  useEffect(() => {
-    const userAddress = HARDCODED_WALLET;
-    setCurrentUser(userAddress);
-    
-    // Create a signer object for the messaging service
-    const signer = {
-      toSuiAddress: () => userAddress,
-      signAndExecuteTransaction: async (params: any) => {
-        // This will be handled by the wallet
-        return { digest: 'mock-digest' };
-      },
-      getAddress: () => userAddress
-    };
+  // Convert SDK channels to legacy format
+  const channels: Channel[] = sdk.channels.map(channel => ({
+    id: channel.id.id,
+    members: channel.auth.member_permissions.contents.map((perm: any) => perm.key),
+    createdAt: Number(channel.created_at_ms),
+    lastMessage: channel.last_message ? {
+      content: channel.last_message.text,
+      sender: channel.last_message.sender,
+      timestamp: Number(channel.last_message.createdAtMs),
+    } : undefined,
+  }));
 
-    try {
-      const service = new MessagingService(signer);
-      setMessagingService(service);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to initialize messaging service:', err);
-      setError('Failed to initialize messaging service');
+  // Convert SDK messages to legacy format
+  const messagesRecord: Record<string, Message[]> = {};
+  if (sdk.currentChannel) {
+    messagesRecord[sdk.currentChannel.id.id] = sdk.messages.map(msg => ({
+      id: String(msg.createdAtMs),
+      content: msg.text,
+      sender: msg.sender,
+      timestamp: Number(msg.createdAtMs),
+      channelId: sdk.currentChannel!.id.id,
+    }));
+  }
+
+  const createChannel = async (recipientAddress: string) => {
+    const result = await sdk.createChannel([recipientAddress]);
+    if (!result) {
+      throw new Error(sdk.channelError || 'Failed to create channel');
     }
-  }, []);
+  };
 
-  // Load channels when messaging service is available
-  useEffect(() => {
-    if (messagingService && currentUser) {
-      refreshChannels();
+  const sendMessage = async (channelId: string, content: string) => {
+    const result = await sdk.sendMessage(channelId, content);
+    if (!result) {
+      throw new Error(sdk.channelError || 'Failed to send message');
     }
-  }, [messagingService, currentUser]);
+  };
 
-  const refreshChannels = useCallback(async () => {
-    if (!messagingService || !currentUser) return;
+  const loadMessages = async (channelId: string) => {
+    await sdk.getChannelById(channelId);
+    await sdk.fetchMessages(channelId);
+  };
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const userChannels = await messagingService.getChannels(currentUser);
-      setChannels(userChannels);
-    } catch (err) {
-      console.error('Failed to load channels:', err);
-      setError('Failed to load channels');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messagingService, currentUser]);
-
-  const createChannel = useCallback(async (recipientAddress: string) => {
-    if (!messagingService) {
-      throw new Error('Messaging service not initialized');
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const signer = {
-        toSuiAddress: () => HARDCODED_WALLET,
-        signAndExecuteTransaction: async (params: any) => {
-          // This will be handled by the wallet
-          return { digest: 'mock-digest' };
-        },
-        getAddress: () => HARDCODED_WALLET
-      };
-
-      const { channelId } = await messagingService.createChannel(signer, recipientAddress);
-      
-      // Refresh channels to include the new one
-      await refreshChannels();
-    } catch (err) {
-      console.error('Failed to create channel:', err);
-      setError('Failed to create channel');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messagingService, refreshChannels]);
-
-  const sendMessage = useCallback(async (channelId: string, content: string) => {
-    if (!messagingService) {
-      throw new Error('Messaging service not initialized');
-    }
-
-    try {
-      const signer = {
-        toSuiAddress: () => HARDCODED_WALLET,
-        signAndExecuteTransaction: async (params: any) => {
-          // This will be handled by the wallet
-          return { digest: 'mock-digest' };
-        },
-        getAddress: () => HARDCODED_WALLET
-      };
-
-      // For now, we'll add the message locally since we need proper memberCapId and encryptedKey
-      const newMessage: Message = {
-        id: `msg-${Date.now()}`,
-        content,
-        sender: HARDCODED_WALLET,
-        timestamp: Date.now(),
-        channelId
-      };
-
-      setMessages(prev => ({
-        ...prev,
-        [channelId]: [...(prev[channelId] || []), newMessage]
-      }));
-
-      // TODO: Implement actual message sending with proper SDK integration
-      // await messagingService.sendMessage(signer, channelId, content, memberCapId, encryptedKey);
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      setError('Failed to send message');
-      throw err;
-    }
-  }, [messagingService]);
-
-  const loadMessages = useCallback(async (channelId: string) => {
-    if (!messagingService || !currentUser) return;
-
-    try {
-      const channelMessages = await messagingService.getMessages(channelId, currentUser);
-      setMessages(prev => ({
-        ...prev,
-        [channelId]: channelMessages
-      }));
-    } catch (err) {
-      console.error('Failed to load messages:', err);
-      setError('Failed to load messages');
-    }
-  }, [messagingService, currentUser]);
+  const refreshChannels = async () => {
+    await sdk.fetchChannels();
+  };
 
   const value: MessagingContextType = {
-    messagingService,
     channels,
-    messages,
-    currentUser,
-    isLoading,
-    error,
+    messages: messagesRecord,
+    currentUser: null, // Not needed with SDK
+    isLoading: sdk.isFetchingChannels || sdk.isFetchingMessages,
+    error: sdk.channelError,
     createChannel,
     sendMessage,
     loadMessages,
-    refreshChannels
+    refreshChannels,
+    // New SDK-specific
+    isReady: sdk.isReady,
+    initializeSession: initializeManually,
+    isInitializing,
+    rawChannels: sdk.channels,
+    rawMessages: sdk.messages,
   };
 
   return (

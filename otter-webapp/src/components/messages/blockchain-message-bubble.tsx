@@ -1,16 +1,23 @@
 "use client";
 
-import { Message } from "@/lib/messaging-service";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useMessaging } from "@/contexts/messaging-context";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+
+interface Message {
+  id: string;
+  content: string;
+  sender: string;
+  timestamp: number;
+  channelId: string;
+}
 
 interface BlockchainMessageBubbleProps {
   message: Message;
 }
 
 export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProps) {
-  const { currentUser } = useMessaging();
-  const isOwn = message.sender === currentUser;
+  const currentAccount = useCurrentAccount();
+  const isOwn = currentAccount && message.sender.toLowerCase() === currentAccount.address.toLowerCase();
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString([], { 
@@ -47,9 +54,11 @@ export function BlockchainMessageBubble({ message }: BlockchainMessageBubbleProp
           </p>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs text-muted-foreground">
-            {formatAddress(message.sender)}
-          </span>
+          {!isOwn && (
+            <span className="text-xs text-muted-foreground">
+              {formatAddress(message.sender)}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground">
             {formatTime(message.timestamp)}
           </span>

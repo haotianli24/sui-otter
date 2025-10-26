@@ -73,7 +73,117 @@
     }
 
     body {
-        @apply bg-background text-foreground font-sans;
+        @apply bg-background text-foreground font-bold text-2xl;
+    }
+
+    .logo-letter {
+        display: inline-block;
+        animation: logoGlow 4s ease-in-out infinite;
+    }
+
+    @keyframes logoGlow {
+
+        0%,
+        25% {
+            text-shadow: 0 0 5px rgb(62 207 142 / 0.3), 0 0 10px rgb(62 207 142 / 0.2);
+            transform: scale(1);
+        }
+
+        12.5% {
+            text-shadow: 0 0 20px rgb(62 207 142 / 0.8), 0 0 30px rgb(62 207 142 / 0.6), 0 0 40px rgb(62 207 142 / 0.4);
+            transform: scale(1.05);
+        }
+
+        25%,
+        100% {
+            text-shadow: 0 0 5px rgb(62 207 142 / 0.3), 0 0 10px rgb(62 207 142 / 0.2);
+            transform: scale(1);
+        }
+    }
+
+    /* Light mode specific adjustments */
+    .light .logo-letter {
+        color: rgb(15 23 42);
+        /* Dark text for light mode */
+    }
+
+    .dark .logo-letter {
+        color: rgb(248 250 252);
+        /* Light text for dark mode */
+    }
+
+    .wave-animation {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, #1e40af, #3b82f6, #60a5fa);
+        background-size: 400% 400%;
+        animation: wave 3s ease-in-out infinite;
+    }
+
+    .wave-animation::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.8) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.6) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.4) 0%, transparent 50%);
+        animation: wave-before 4s ease-in-out infinite;
+    }
+
+    .wave-animation::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+            radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 50%);
+        animation: wave-after 5s ease-in-out infinite;
+    }
+
+    @keyframes wave {
+
+        0%,
+        100% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+    }
+
+    @keyframes wave-before {
+
+        0%,
+        100% {
+            transform: translateX(0) translateY(0) rotate(0deg);
+        }
+
+        50% {
+            transform: translateX(-10px) translateY(-5px) rotate(180deg);
+        }
+    }
+
+    @keyframes wave-after {
+
+        0%,
+        100% {
+            transform: translateX(0) translateY(0) rotate(0deg);
+        }
+
+        50% {
+            transform: translateX(10px) translateY(5px) rotate(-180deg);
+        }
     }
 }
 

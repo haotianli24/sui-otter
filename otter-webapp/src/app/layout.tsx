@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Open_Sans } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./client-layout";
 
-const openSans = Open_Sans({
+const dmSans = DM_Sans({
     subsets: ["latin"],
     variable: "--font-sans",
 });
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={`${openSans.variable} font-sans antialiased`}>
+            <body className={`${dmSans.variable} font-sans antialiased`}>
                 <ClientLayout>{children}</ClientLayout>
             </body>
         </html>

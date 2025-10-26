@@ -19,15 +19,15 @@ export function TopBar() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
+    <div className="h-28 border-b border-border bg-card flex items-center justify-between px-6">
       {/* Search */}
-      <div className="flex-1 max-w-md">
+      <div className="flex-1 max-w-3xl">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search messages, users, or communities..."
-            className="w-full h-10 pl-10 pr-4 bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full h-16 pl-16 pr-4 bg-background border border-input focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
       </div>
@@ -36,7 +36,7 @@ export function TopBar() {
       <div className="flex items-center gap-4">
         {/* Wallet connection */}
         <WalletConnection />
-        
+
         {/* Theme toggle */}
         <Button
           variant="ghost"
@@ -60,21 +60,21 @@ export function TopBar() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-medium text-xl">{currentUser.name}</p>
+                <p className="text-lg text-muted-foreground">
                   {currentUser.address}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Help & Support</DropdownMenuItem>
+            <DropdownMenuItem className="py-5 text-xl">Profile</DropdownMenuItem>
+            <DropdownMenuItem className="py-5 text-xl">Settings</DropdownMenuItem>
+            <DropdownMenuItem className="py-5 text-xl">Help & Support</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive py-5 text-xl">
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -7,6 +7,8 @@ import { formatTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { CopyTradeModal } from "./copy-trade-modal";
+import { detectTransactionHash } from "@/lib/transaction-detector";
+import TransactionEmbed from "@/components/transaction/TransactionEmbed";
 
 interface MessageBubbleProps {
     message: Message;
@@ -15,6 +17,9 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
     const isSent = message.senderId === currentUser.id;
     const [showCopyTradeModal, setShowCopyTradeModal] = useState(false);
+
+    // Detect transaction hash in message content
+    const transactionHash = detectTransactionHash(message.content);
 
     if (message.type === "trade" && message.tradeData) {
         return (
@@ -127,25 +132,39 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 isSent ? "justify-end" : "justify-start"
             )}
         >
-            <div
-                className={cn(
-                    "max-w-[450px] px-4 py-2",
-                    isSent
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-card text-card-foreground border border-border"
-                )}
-            >
-                <p className="text-sm break-words">{message.content}</p>
+            <div className="max-w-[450px]">
                 <div
                     className={cn(
-                        "text-xs mt-1",
+                        "px-4 py-2",
                         isSent
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-card text-card-foreground border border-border"
                     )}
                 >
-                    {formatTime(message.timestamp)}
+                    <p className="text-sm break-words">{message.content}</p>
+                    <div
+                        className={cn(
+                            "text-xs mt-1",
+                            isSent
+                                ? "text-primary-foreground/70"
+                                : "text-muted-foreground"
+                        )}
+                    >
+                        {formatTime(message.timestamp)}
+                    </div>
                 </div>
+
+                {/* Transaction Embed */}
+                {transactionHash && (
+                    <div className="mt-2">
+                        <TransactionEmbed
+                            digest={transactionHash}
+                            senderName={message.senderId === currentUser.id ? currentUser.name : "Other User"}
+                            isCurrentUser={message.senderId === currentUser.id}
+                            groupName="Trading Group"
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

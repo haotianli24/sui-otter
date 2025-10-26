@@ -13,11 +13,12 @@ import {
     Settings,
     Menu,
     X,
+    Waves,
 } from "lucide-react";
 
 const navItems = [
     {
-        name: "Direct Messages",
+        name: "DMs",
         href: "/messages",
         icon: MessageSquare,
     },
@@ -25,6 +26,11 @@ const navItems = [
         name: "Groups",
         href: "/groups",
         icon: Users,
+    },
+    {
+        name: "Stream",
+        href: "/stream",
+        icon: Waves,
     },
     {
         name: "Discover",
@@ -74,13 +80,15 @@ export function Sidebar() {
             {/* Sidebar */}
             <div
                 className={cn(
-                    "w-64 h-screen bg-card border-r border-border flex flex-col transition-transform md:translate-x-0 fixed md:relative z-40",
+                    "w-80 h-screen bg-card border-r border-border flex flex-col transition-transform md:translate-x-0 fixed md:relative z-40",
                     isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Logo */}
-                <div className="h-16 flex items-center px-6 border-b border-border">
-                    <h1 className="text-xl font-bold text-primary">Otter</h1>
+                <div className="h-28 flex items-center px-6 border-b border-border">
+                    <h1 className="text-3xl font-bold text-foreground">
+                        OxTTER
+                    </h1>
                 </div>
 
                 {/* Navigation */}
@@ -95,10 +103,10 @@ export function Sidebar() {
                                 href={item.href}
                                 onClick={() => setIsMobileMenuOpen(false)}
                                 className={cn(
-                                    "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors",
+                                    "flex items-center gap-4 px-4 py-5 text-lg font-semibold transition-colors",
                                     isActive
                                         ? "bg-primary text-primary-foreground"
-                                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                        : "text-foreground hover:bg-accent hover:text-accent-foreground"
                                 )}
                             >
                                 <Icon className="h-5 w-5" />
@@ -109,10 +117,12 @@ export function Sidebar() {
                 </nav>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-border">
-                    <div className="text-xs text-muted-foreground">
-                        <p className="font-medium">Decentralized Social Trading</p>
-                        <p className="mt-1">Built on Sui</p>
+                <div className="p-6 border-t border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-primary-foreground">S</span>
+                        </div>
+                        <span className="text-sm">Powered by Sui</span>
                     </div>
                 </div>
             </div>

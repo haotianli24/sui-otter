@@ -46,7 +46,7 @@ export default function ProfilePage() {
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                            <h1 className="text-2xl font-bold mb-2">{currentUser.name}</h1>
+                            <h1 className="text-3xl font-bold mb-2">{currentUser.name}</h1>
                             <p className="text-muted-foreground mb-3">{currentUser.bio}</p>
                             <div className="flex items-center gap-2">
                                 <code className="px-3 py-1 bg-muted text-sm">

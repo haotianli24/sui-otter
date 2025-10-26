@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Channel } from "@/lib/messaging-service";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useMessaging } from "@/contexts/messaging-context";
+import { formatDistanceToNow } from "@/lib/format-date";
 
 interface BlockchainConversationListProps {
   selectedId?: string;
@@ -28,15 +28,15 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const getOtherParticipant = (channel: Channel, currentUser: string) => {
+  const getOtherParticipant = (channel: any) => {
     // For now, we'll show the channel ID since we don't have member info
     // In a real implementation, you'd get the other participant's address
     return formatAddress(channel.id);
   };
 
-  if (isLoading) {
+  if (isLoading && channels.length === 0) {
     return (
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex items-center space-x-3 p-3">
@@ -54,7 +54,7 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
 
   if (error) {
     return (
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="text-center text-destructive">
           <p className="text-sm">Failed to load conversations</p>
           <p className="text-xs text-muted-foreground mt-1">{error}</p>
@@ -65,18 +65,18 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
 
   if (channels.length === 0) {
     return (
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="text-center text-muted-foreground">
           <p className="text-sm">No conversations yet</p>
-          <p className="text-xs mt-1">Create a new message to get started</p>
+          <p className="text-xs mt-1">Create a new channel to get started</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4">
-      <div className="space-y-1">
+    <div className="flex-1 overflow-y-auto">
+      <div className="space-y-1 p-2">
         {channels.map((channel) => (
           <div
             key={channel.id}
@@ -87,18 +87,18 @@ export function BlockchainConversationList({ selectedId, onSelect }: BlockchainC
           >
             <Avatar className="h-10 w-10">
               <AvatarFallback className="bg-primary text-primary-foreground">
-                {getOtherParticipant(channel, "").slice(0, 2).toUpperCase()}
+                {getOtherParticipant(channel).slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium truncate">
-                  {getOtherParticipant(channel, "")}
+                  {getOtherParticipant(channel)}
                 </p>
                 {channel.lastMessage && (
-                  <Badge variant="secondary" className="text-xs">
-                    New
-                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(channel.lastMessage.timestamp))}
+                  </span>
                 )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
