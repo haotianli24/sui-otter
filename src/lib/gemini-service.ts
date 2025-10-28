@@ -105,12 +105,6 @@ function generateFallbackExplanation(txData: TransactionData, context?: MessageC
 }
 
 export async function generateTransactionExplanation(txData: TransactionData, _context?: MessageContext): Promise<string> {
-    // Check if we have API key
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        return generateFallbackExplanation(txData, _context);
-    }
-
     // Simple rate limiting
     const now = Date.now();
     if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
@@ -118,109 +112,50 @@ export async function generateTransactionExplanation(txData: TransactionData, _c
     }
     lastRequestTime = now;
 
-    // Build context-aware prompt
-    let contextInfo = "";
-    if (_context) {
-        if (_context.isCurrentUser) {
-            contextInfo = `This is YOUR transaction that you shared in ${_context.groupName || 'the chat'}. `;
-        } else {
-            contextInfo = `${_context.senderName} shared this transaction in ${_context.groupName || 'the chat'}. `;
+    try {
+        // Get current user's address for userId (for rate limiting)
+        const userId = _context?.currentUserAddress || 'anonymous';
+
+        // Call the Vercel serverless function
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                txData,
+                context: _context,
+                userId,
+            }),
+        });
+
+        const data = await response.json();
+
+        // If the API returns a fallback flag, use local fallback
+        if (data.fallback || !data.success) {
+            console.warn("Gemini API unavailable or failed, using fallback explanation:", data.error);
+            return generateFallbackExplanation(txData, _context);
         }
-    }
 
-    // Build protocol and address context
-    let protocolContext = "";
-    if (txData.protocolName) {
-        protocolContext += `- Protocol: ${txData.protocolName}\n`;
-    }
-    if (txData.validatorName) {
-        protocolContext += `- Validator: ${txData.validatorName}\n`;
-    }
-    if (txData.cexName) {
-        protocolContext += `- Exchange: ${txData.cexName}\n`;
-    }
-
-    // Call the actual Gemini API
-    // TODO: Update to use correct @google/genai API client
-    // Temporarily using fallback until correct API is implemented
-    console.warn("Gemini API integration temporarily disabled, using fallback explanation");
-    return generateFallbackExplanation(txData, _context);
-    /*
-    const genAI = await import("@google/genai");
-    // Need to implement correct API client initialization
-
-    // Build personalized context for pronoun usage
-    let pronounContext = "";
-    if (_context) {
-        // Check if any transaction participants match the current user's address
-        const isUserTransaction = _context.isCurrentUser ||
-            (_context.currentUserAddress && txData.participants.includes(_context.currentUserAddress));
-
-        if (isUserTransaction) {
-            pronounContext = `IMPORTANT: This is the current user's transaction. When referring to the wallet/account that performed this transaction, use "you" and "your". For example: "You transferred tokens" or "Your wallet created a new object".`;
-        } else {
-            pronounContext = `IMPORTANT: This is ${_context.senderName}'s transaction. When referring to the wallet/account that performed this transaction, use "${_context.senderName}" or "they/their". For example: "${_context.senderName} transferred tokens" or "Their wallet created a new object".`;
+        if (data.explanation) {
+            return data.explanation;
         }
+
+        throw new Error('No explanation received from API');
+    } catch (error) {
+        console.error("Error calling Gemini API:", error);
+        return generateFallbackExplanation(txData, _context);
     }
-
-    const prompt = `Given a Sui blockchain transaction digest, explain in simple, friendly language what this transaction entails. Include the following details:
-
-    The type of transaction (e.g., transfer, minting, object mutation)
-
-    The main objects involved and their roles
-
-    The outcome or effect of the transaction
-
-    Any relevant context needed for understanding
-
-    Use clear, non-technical language suitable for a general audience
-
-    Keep the explanation brief, no more than a few sentences
-
-Make it easy to understand for someone with no blockchain background.
-
-${pronounContext}
-
-${contextInfo}Transaction Details:
-- Hash: ${txData.digest}
-- Gas Used: ${txData.gasUsed} SUI
-- Participants: ${txData.participants.length} addresses
-
-Operations:
-${txData.operations.map(op => `- ${op.type}: ${op.description}${op.amount ? ` (${op.amount} ${op.asset || 'tokens'})` : ''}`).join('\n')}
-
-Move Calls:
-${txData.moveCalls.map(call => `- ${call.package}::${call.module}::${call.function}`).join('\n')}
-
-${protocolContext ? `Additional Context:\n${protocolContext}` : ''}`;
-
-    console.log("Calling Gemini API for transaction explanation...");
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const explanation = response.text();
-
-    console.log("Gemini API response received");
-    return explanation;
-    */
 }
 
 export async function isGeminiAvailable(): Promise<boolean> {
     try {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            return false;
-        }
-
-        // Test with a simple API call
-        // TODO: Update to use correct @google/genai API client
-        // Temporarily return false to fix build
-        return false;
-        /*
-        const genAI = await import("@google/genai");
-        // Need to implement correct API client initialization
-        */
-
-        return true;
+        // Check if the API endpoint is available by making a HEAD request
+        const response = await fetch('/api/gemini', {
+            method: 'OPTIONS',
+        });
+        
+        return response.ok;
     } catch (error) {
         console.error("Gemini API not available:", error);
         return false;

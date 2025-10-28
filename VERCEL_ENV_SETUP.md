@@ -25,9 +25,15 @@ NEXT_PUBLIC_SUI_NETWORK=testnet
 VITE_SUPABASE_URL=https://tnofvkkfojnjagylvvbh.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRub2Z2a2tmb2puamFneWx2dmJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0NDE5OTIsImV4cCI6MjA3NzAxNzk5Mn0.trUa2kic1xIj8KxC2HVVmS_BCD9NbYhURnK3uVQTXlM
 
-VITE_GEMINI_API_KEY=AIzaSyBdgumYb0N71EZLT1jt-y0chhC54aL7zuc
 VITE_FETCHAI_API_KEY=sk_1ca6bd86b301469c87e42c79875dc6ecfa7684f8aaf54dd093bab30c619051a7
 ```
+
+**For Vercel Serverless Functions (API routes):**
+```
+GEMINI_API_KEY=AIzaSyBdgumYb0N71EZLT1jt-y0chhC54aL7zuc
+```
+
+Note: The Gemini API key is now set as a server-side environment variable (`GEMINI_API_KEY`) for security. It is only accessible by the serverless function in `/api/gemini.js` and not exposed to the client.
 
 ### 3. Enable for all environments:
 - Production
