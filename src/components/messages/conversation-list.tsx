@@ -57,12 +57,12 @@ export function ConversationList({
                                 key={conv.id}
                                 onClick={() => onSelect(conv.id)}
                                 className={cn(
-                                    "w-full flex items-start gap-3 p-4 transition-all duration-200 ease-in-out",
+                                    "w-full flex items-start gap-3 p-4 transition-all duration-200 ease-in-out select-none",
                                     "border border-transparent hover:border-border/50 hover:shadow-sm hover:bg-muted/30",
-                                    "hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary/20",
+                                    "focus:outline-none focus:ring-2 focus:ring-primary/20",
                                     !isLast && "border-b border-border/20",
                                     isSelected
-                                        ? "bg-primary/10 border-primary/30 shadow-md ring-1 ring-primary/20 scale-[1.01] rounded-xl"
+                                        ? "bg-primary/10 border-primary/30 shadow-md ring-1 ring-primary/20 rounded-xl"
                                         : "rounded-xl"
                                 )}
                             >

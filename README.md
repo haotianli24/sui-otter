@@ -81,15 +81,19 @@ Otter is a comprehensive decentralized platform built on the Sui blockchain that
    ```
 
 3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
+   Create a `.env` file in the root directory:
    
-   Configure the following:
    ```env
+   # Supabase (optional for local dev)
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_key
-   VITE_API_SERVER_URL=http://localhost:3001
+   
+   # Fetch.ai API Key (for AI Agents)
+   VITE_FETCHAI_API_KEY=your_fetchai_api_key
+   
+   # Google Gemini API Key (for AI Transaction Explanations)
+   # Get your key from: https://aistudio.google.com/app/apikey
+   GEMINI_API_KEY=your_gemini_api_key
    ```
 
 4. **Start the development server**
@@ -158,6 +162,7 @@ npm run preview
 
 ### 5. **Activity Stream** (`/stream`)
 - Real-time transaction monitoring
+- **AI-Powered Transaction Explanations**: Click any transaction for a natural language explanation
 - Filter by activity type:
   - Transfers (incoming/outgoing)
   - Swaps
@@ -166,6 +171,7 @@ npm run preview
 - Time range filtering (hour, day, week, all-time)
 - Live polling for new transactions
 - Pagination for historical data
+- Powered by Google Gemini for intelligent transaction analysis
 
 ### 6. **Profile** (`/profile`)
 - User profile management
@@ -334,6 +340,30 @@ otter-webapp/
 - Initialize messaging session on first use
 - Ensure both parties have initialized messaging
 - Check browser console for detailed errors
+
+### AI Explanation "Failed to generate explanation"
+If you see this error, it means the AI transaction explanation feature isn't working. To fix:
+
+1. **Make sure the API server is running**:
+   ```bash
+   npm run dev:full  # Runs both frontend and API server
+   ```
+
+2. **Set up your Gemini API key**:
+   - Get a free API key from: https://aistudio.google.com/app/apikey
+   - Add to your `.env` file:
+     ```env
+     GEMINI_API_KEY=your_api_key_here
+     ```
+
+3. **For production/Vercel deployment**:
+   - Add `GEMINI_API_KEY` to your Vercel environment variables
+   - The `/api/transaction-explain.js` serverless function will handle requests
+
+4. **Check the console**:
+   - Open browser DevTools → Console
+   - Look for detailed error messages
+   - Ensure API requests are reaching `http://localhost:3001/api/transaction-explain`
 
 ---
 

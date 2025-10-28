@@ -51,7 +51,10 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData, senderName
         setError(null);
 
         try {
-            const response = await fetch("/api/transaction-explain", {
+            // Try Vercel API first, fallback to local API
+            const apiUrl = "/api/transaction-explain";
+            
+            const response = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -66,14 +69,21 @@ export function AIExplanationModal({ isOpen, onClose, digest, txData, senderName
             });
 
             if (!response.ok) {
-                throw new Error("Failed to generate explanation");
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `API error: ${response.status}`);
             }
 
             const data = await response.json();
+            
+            if (!data.explanation) {
+                throw new Error("No explanation received from API");
+            }
+            
             setExplanation(data.explanation);
         } catch (err) {
             console.error("Error generating explanation:", err);
-            setError(err instanceof Error ? err.message : "Failed to generate explanation");
+            const errorMessage = err instanceof Error ? err.message : "Failed to generate explanation";
+            setError(`${errorMessage}. Make sure the API server is running (npm run dev:full) or check your GEMINI_API_KEY.`);
         } finally {
             setIsLoading(false);
         }

@@ -115,7 +115,7 @@ export function ZeroBackground({ className }: ZeroBackgroundProps) {
         <div
             ref={updateContainerSize}
             className={cn(
-                "fixed pointer-events-auto overflow-hidden",
+                "fixed pointer-events-none overflow-hidden select-none",
                 "z-0",
                 className
             )}

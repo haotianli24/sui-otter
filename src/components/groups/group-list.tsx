@@ -51,7 +51,7 @@ export function GroupList({ groups, selectedId, onSelect }: GroupListProps) {
               key={group.id}
               onClick={() => onSelect(group.id)}
               className={cn(
-                "w-full p-4 flex items-start gap-3 hover:bg-accent transition-colors border-b border-border",
+                "w-full p-4 flex items-start gap-3 hover:bg-accent transition-colors border-b border-border select-none",
                 isSelected && "bg-accent"
               )}
             >

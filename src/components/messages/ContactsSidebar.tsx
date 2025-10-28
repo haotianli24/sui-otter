@@ -46,7 +46,7 @@ export default function ContactsSidebar() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-6 py-4 flex items-center justify-between">
+      <div className="px-6 py-4 flex items-center justify-between flex-shrink-0">
         <h3 className="text-lg font-semibold">Contacts</h3>
         <button
           className={cn(
@@ -61,7 +61,7 @@ export default function ContactsSidebar() {
       </div>
 
       {/* New DM section */}
-      <div className="px-6 py-4 space-y-3">
+      <div className="px-6 py-4 space-y-3 flex-shrink-0">
         <label htmlFor="new-dm" className="text-sm font-medium text-foreground">Start a new DM</label>
         <div className="space-y-2">
           <input
@@ -89,9 +89,9 @@ export default function ContactsSidebar() {
       </div>
 
       {/* Separator bar */}
-      <div className="border-t border-border/50"></div>
+      <div className="border-t border-border/50 flex-shrink-0"></div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-none">
+      <div className="flex-1 overflow-y-auto scrollbar-none min-h-0">
         {!isReady ? (
           <div className="p-6 space-y-4">
             <button
@@ -199,7 +199,7 @@ function ChannelItem({ channel, currentAccount }: ChannelItemProps) {
 
   return (
     <button
-      className="w-full text-left px-4 py-4 hover:bg-accent/50 transition-all duration-200 ease-in-out hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg my-1"
+      className="w-full text-left px-4 py-4 hover:bg-accent/50 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg my-1 select-none"
       onClick={() => {
         window.location.hash = channel.id;
       }}
