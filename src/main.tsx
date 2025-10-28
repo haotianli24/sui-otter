@@ -10,8 +10,8 @@ import App from "./App.tsx";
 import { getFullnodeUrl } from "@mysten/sui/client";
 import { createNetworkConfig } from "@mysten/dapp-kit";
 import { SuiClient } from "@mysten/sui/client";
-import { ThemeProvider } from "./components/theme-provider";
-import { UserProfileProvider } from "./contexts/UserProfileContext";
+import { ThemeProvider } from "./components/theme-provider.tsx";
+import { UserProfileProvider } from "./contexts/UserProfileContext.tsx";
 
 const queryClient = new QueryClient();
 
