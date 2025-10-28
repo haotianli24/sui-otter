@@ -328,7 +328,7 @@ export const useMessaging = () => {
           console.log('[sendMessage] Starting Walrus HTTP API upload...');
 
           // Use HTTP API upload
-          const { uploadFileToWalrusHTTP, getFileCategory } = await import('../lib/walrus-service');
+          const { uploadFileToWalrusHTTP } = await import('../lib/walrus-service');
           const uploadResult = await uploadFileToWalrusHTTP(mediaFile, 10);
 
           console.log('[sendMessage] Upload successful:', uploadResult);

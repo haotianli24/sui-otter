@@ -141,7 +141,7 @@ export async function generateTransactionExplanation(txData: TransactionData, _c
     }
 
     // Call the actual Gemini API
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const { GoogleGenerativeAI } = await import("@google/genai");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -207,7 +207,7 @@ export async function isGeminiAvailable(): Promise<boolean> {
         }
 
         // Test with a simple API call
-        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const { GoogleGenerativeAI } = await import("@google/genai");
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 

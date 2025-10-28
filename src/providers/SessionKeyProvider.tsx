@@ -42,13 +42,8 @@ export const SessionKeyProvider = ({ children }: { children: ReactNode }) => {
     if (!sessionKey) return false;
 
     try {
-      // Check if session is close to expiry (within refresh buffer)
-      const now = Date.now();
-      const creationTime = sessionKey.creationTimeMs;
-      const ttlMs = sessionKey.ttlMin * 60 * 1000;
-      const refreshTime = creationTime + ttlMs - (REFRESH_BUFFER_MINUTES * 60 * 1000);
-
-      return now >= refreshTime;
+      // Check if session is expired - if so, it needs refresh
+      return sessionKey.isExpired();
     } catch (error) {
       console.error('Error checking session refresh need:', error);
       return true; // If we can't check, assume it needs refresh

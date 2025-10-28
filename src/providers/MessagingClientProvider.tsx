@@ -66,12 +66,15 @@ export const MessagingClientProvider = ({
       });
 
       // Create messaging client with storage
-      const messaging = extendedClient.$extend(
+      const extendedWithMessaging = extendedClient.$extend(
         SuiStackMessagingClient.experimental_asClientExtension({
           storage: () => storage,
           sessionKey,
         })
-      ).messaging;
+      );
+
+      // Access the messaging extension
+      const messaging = (extendedWithMessaging as any).messaging as SuiStackMessagingClient;
 
       return {
         messaging,
