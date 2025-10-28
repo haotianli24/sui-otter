@@ -16,6 +16,7 @@ interface Message {
     sender: string;
     timestamp: number;
     channelId: string;
+    type?: "text" | "trade" | "crypto";
 }
 
 interface Conversation {
@@ -91,7 +92,7 @@ export function ConversationList({
                                                 "text-xs ml-2 transition-colors",
                                                 isSelected ? "text-primary/70" : "text-muted-foreground"
                                             )}>
-                                                {formatDistanceToNow(conv.lastMessage.timestamp)}
+                                                {formatDistanceToNow(new Date(conv.lastMessage.timestamp))}
                                             </span>
                                         )}
                                     </div>

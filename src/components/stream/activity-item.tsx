@@ -193,7 +193,7 @@ export function ActivityItem({
                             <TransactionEmbed
                                 digest={digest}
                                 senderName={resolveAddressLabel(sender) || formatAddress(sender)}
-                                isCurrentUser={currentUserAddress && participants.includes(currentUserAddress)}
+                                isCurrentUser={!!(currentUserAddress && participants.includes(currentUserAddress))}
                                 groupName="Activity Stream"
                                 currentUserAddress={currentUserAddress}
                             />

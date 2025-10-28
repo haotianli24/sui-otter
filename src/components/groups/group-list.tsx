@@ -17,6 +17,7 @@ interface Message {
   sender: string;
   timestamp: number;
   channelId: string;
+  type?: "text" | "trade" | "crypto";
 }
 
 interface Conversation {
@@ -84,7 +85,7 @@ export function GroupList({ groups, selectedId, onSelect }: GroupListProps) {
               <div className="flex flex-col items-end gap-1">
                 {group.lastMessage && (
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(group.lastMessage.timestamp)}
+                    {formatDistanceToNow(new Date(group.lastMessage.timestamp))}
                   </span>
                 )}
                 {group.unreadCount > 0 && (

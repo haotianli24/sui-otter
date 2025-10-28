@@ -1,30 +1,129 @@
 
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Message, currentUser } from "@/lib/mock-data";
 import { formatTime } from "@/lib/format-date";
+import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
+import { CopyTradeModal } from "./copy-trade-modal";
 import { detectTransactionHash } from "@/lib/transaction-detector";
 import TransactionEmbed from "@/components/transaction/TransactionEmbed";
-import { useUsername } from "@/hooks/useUsernameRegistry";
-import { getDisplayName } from "@/contexts/UserProfileContext";
 
 interface MessageBubbleProps {
-    message: {
-        id: string;
-        content: string;
-        sender: string;
-        timestamp: number;
-        channelId: string;
-    };
-    currentUserAddress?: string;
+    message: Message;
 }
 
-export function MessageBubble({ message, currentUserAddress }: MessageBubbleProps) {
-    const { data: username } = useUsername(message.sender);
-    const displayName = username || getDisplayName(message.sender);
-    const isSent = currentUserAddress && message.sender.toLowerCase() === currentUserAddress.toLowerCase();
+export function MessageBubble({ message }: MessageBubbleProps) {
+    const isSent = message.senderId === currentUser.id;
+    const [showCopyTradeModal, setShowCopyTradeModal] = useState(false);
 
     // Detect transaction hash in message content
     const transactionHash = detectTransactionHash(message.content);
+
+    if (message.type === "trade" && message.tradeData) {
+        return (
+            <div
+                className={cn(
+                    "flex mb-4",
+                    isSent ? "justify-end" : "justify-start"
+                )}
+            >
+                <div
+                    className={cn(
+                        "max-w-[450px] p-4 border-2 rounded-2xl",
+                        isSent
+                            ? "bg-primary/10 border-border/50 backdrop-blur-md"
+                            : "bg-secondary/80 border-border/50 backdrop-blur-md"
+                    )}
+                >
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">📊</span>
+                        <span className="font-semibold text-sm">Trade Shared</span>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Action:</span>
+                            <span
+                                className={cn(
+                                    "font-semibold",
+                                    message.tradeData.action === "buy"
+                                        ? "text-primary"
+                                        : "text-destructive/70"
+                                )}
+                            >
+                                {message.tradeData.action.toUpperCase()}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Token:</span>
+                            <span className="font-medium">{message.tradeData.token}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Amount:</span>
+                            <span className="font-medium">{message.tradeData.amount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Price:</span>
+                            <span className="font-medium">{message.tradeData.price}</span>
+                        </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border">
+                        <Button
+                            size="sm"
+                            className="w-full"
+                            variant="outline"
+                            onClick={() => setShowCopyTradeModal(true)}
+                        >
+                            <Copy className="h-3 w-3 mr-2" />
+                            Copy Trade
+                        </Button>
+                    </div>
+                    <CopyTradeModal
+                        isOpen={showCopyTradeModal}
+                        onClose={() => setShowCopyTradeModal(false)}
+                        trade={message.tradeData}
+                    />
+                    <div className="mt-2 text-xs text-muted-foreground">
+                        {formatTime(message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (message.type === "crypto" && message.cryptoData) {
+        return (
+            <div
+                className={cn(
+                    "flex mb-4",
+                    isSent ? "justify-end" : "justify-start"
+                )}
+            >
+                <div
+                    className={cn(
+                        "max-w-[350px] p-4 border-2 rounded-2xl",
+                        isSent
+                            ? "bg-primary/10 border-primary"
+                            : "bg-secondary/80 border-border"
+                    )}
+                >
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">💰</span>
+                        <span className="font-semibold text-sm">
+                            {isSent ? "Sent" : "Received"} Crypto
+                        </span>
+                    </div>
+                    <div className="text-2xl font-bold text-primary mb-1">
+                        {message.cryptoData.amount} {message.cryptoData.token}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        {formatTime(message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
@@ -36,7 +135,7 @@ export function MessageBubble({ message, currentUserAddress }: MessageBubbleProp
             <div className="max-w-[450px]">
                 <div
                     className={cn(
-                        "px-4 py-2 rounded-2xl",
+                            "px-4 py-2 rounded-2xl",
                         isSent
                             ? "bg-primary/10 text-foreground border border-border/50 backdrop-blur-md"
                             : "bg-secondary/80 text-foreground border border-border/50 backdrop-blur-md"
@@ -49,7 +148,7 @@ export function MessageBubble({ message, currentUserAddress }: MessageBubbleProp
                             "text-muted-foreground"
                         )}
                     >
-                        {formatTime(message.timestamp)}
+                        {formatTime(message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))}
                     </div>
                 </div>
 
@@ -58,10 +157,9 @@ export function MessageBubble({ message, currentUserAddress }: MessageBubbleProp
                     <div className="mt-2">
                         <TransactionEmbed
                             digest={transactionHash}
-                            senderName={displayName}
-                            isCurrentUser={isSent}
-                            groupName="Channel"
-                            currentUserAddress={currentUserAddress}
+                            senderName={message.senderId === currentUser.id ? currentUser.name : "Other User"}
+                            isCurrentUser={!!(message.senderId === currentUser.id)}
+                            groupName="Trading Group"
                         />
                     </div>
                 )}

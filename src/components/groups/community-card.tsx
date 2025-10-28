@@ -26,6 +26,11 @@ interface Community {
   isJoined?: boolean;
   trending?: boolean;
   priceChange?: number;
+  pnl?: {
+    value: string;
+    percentage: string;
+    positive: boolean;
+  };
 }
 
 interface CommunityCardProps {
