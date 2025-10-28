@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm ci && npm run build",
-  "outputDirectory": "otter-webapp/dist",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",
