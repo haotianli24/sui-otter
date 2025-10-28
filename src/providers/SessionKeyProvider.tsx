@@ -20,7 +20,6 @@ const SessionKeyContext = createContext<SessionKeyContextProps | undefined>(unde
 
 const PACKAGE_ID = '0x984960ebddd75c15c6d38355ac462621db0ffc7d6647214c802cd3b685e1af3d';
 const TTL_MINUTES = 30;
-const REFRESH_BUFFER_MINUTES = 5; // Refresh session 5 minutes before expiry
 
 export const SessionKeyProvider = ({ children }: { children: ReactNode }) => {
   const suiClient = useSuiClient();

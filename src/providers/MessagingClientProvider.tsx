@@ -67,6 +67,7 @@ export const MessagingClientProvider = ({
 
       // Create messaging client with storage
       const extendedWithMessaging = extendedClient.$extend(
+        // @ts-expect-error - Type incompatibility between @mysten/sui versions in messaging package
         SuiStackMessagingClient.experimental_asClientExtension({
           storage: () => storage,
           sessionKey,
