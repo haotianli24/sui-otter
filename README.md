@@ -1,8 +1,9 @@
-# 🦦 Otter: Decentralized Trading & Community Platform on Sui
+# Otter: Decentralized Trading & Community Platform on Sui
 
-**Tagline:** *Swim smarter. Trade together. Own your community.*
-
----
+## Usage Guide 
+- Download Slush Wallet from google chrome store 
+- Make sure your network is set to TESTNET 
+- Connect your wallet! 
 
 ## 🎯 Overview
 
